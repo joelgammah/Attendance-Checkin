@@ -1,0 +1,22 @@
+# Global dockerignore for both backend and frontend build contexts
+.git
+.gitignore
+.DS_Store
+.env
+
+# Python
+**/__pycache__/
+**/*.pyc
+backend/.venv/
+backend/app.db
+backend/htmlcov/
+backend/.pytest_cache/
+
+# Node/Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+
+# Editor/OS
+.vscode/
+.idea/

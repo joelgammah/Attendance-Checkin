@@ -1,0 +1,63 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: infra/docker/backend.Dockerfile
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-sqlite:////data/app.db}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret}
+      - CORS_ORIGIN=http://localhost:8080
+    volumes:
+      - dbdata:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').getcode()==200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: infra/docker/frontend.Dockerfile
+      args:
+        VITE_API_URL: /api
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/ || busybox wget -q --spider http://localhost/ || nc -z localhost 80"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  dbdata:
+
+# Optional Postgres service (uncomment to use Postgres instead of SQLite)
+# services:
+#   postgres:
+#     image: postgres:16-alpine
+#     environment:
+#       - POSTGRES_USER=app
+#       - POSTGRES_PASSWORD=app
+#       - POSTGRES_DB=app
+#     volumes:
+#       - pgdata:/var/lib/postgresql/data
+#     ports:
+#       - "5432:5432"
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U app"]
+#       interval: 10s
+#       timeout: 3s
+#       retries: 10
+#
+# To switch, set:
+#   DATABASE_URL=postgresql+psycopg://app:app@postgres:5432/app
+# and add dependency in backend requirements: psycopg[binary]
+#
+# volumes:
+#   pgdata:

@@ -1,0 +1,8 @@
+__pycache__
+*.pyc
+.DS_Store
+.venv
+pytest_cache
+htmlcov
+app.db
+alembic/versions/*.pyc
