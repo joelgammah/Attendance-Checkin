@@ -20,8 +20,6 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 	python3 -m venv .venv && source .venv/bin/activate
 	cd backend
 	python3 -m pip install -e '.[dev]'
-	# Optional: override DB location (default is ./app.db inside backend)
-	# export DATABASE_URL=sqlite:///../app.db
 	uvicorn app.main:app --reload
 	```
 	Visit http://localhost:8000/docs
@@ -59,7 +57,10 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 
 ### Demo Login
 - Organizer: `grayj@wofford.edu` / `grayj`
-- Attendee: `student1@wofford.edu` / `student1`
+- Organizer: `clublead@wofford.edu` / `clublead`
+- Attendee: `gammahja@wofford.edu` / `gammahja`
+- Attendee: `martincs@wofford.edu` / `martincs`
+- Attendee: `podrebarack@wofford.edu` / `podrebarack`
 
 ## Tests & Coverage
 
