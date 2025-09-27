@@ -9,6 +9,17 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 
 ## Running Locally
 
+### Notes:
+- zsh extras must be quoted/escaped, e.g. `'.[dev]'`.
+- On first backend start, the SQLite DB is created and demo users are seeded.
+- Frontend auto‑reloads on changes. Backend auto‑reloads on changes in `backend/app/`.
+- Always run backend commands from the `backend/` directory to ensure the SQLite DB is created at `backend/app.db`.
+- API base URL: frontend defaults to `http://localhost:8000`. To override:
+	```bash
+	# from frontend/
+	VITE_API_URL=http://localhost:8000 pnpm dev
+	```
+
 ### First Run (Dev)
 - Prerequisites:
 	- Python 3.11+ (3.13 OK)
@@ -33,14 +44,6 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 	```
 	Visit http://localhost:5173
 
-- Notes:
-	- zsh extras must be quoted/escaped, e.g. `'.[dev]'`.
-	- On first backend start, the SQLite DB is created and demo users are seeded.
-	- API base URL: frontend defaults to `http://localhost:8000`. To override:
-		```bash
-		# from frontend/
-		VITE_API_URL=http://localhost:8000 pnpm dev
-		```
 
 ### Daily Local Run
 - Backend:
@@ -77,6 +80,19 @@ cd frontend
 pnpm test:cov
 ```
 Coverage report in `frontend/coverage/index.html`.
+
+## Database
+
+### SQLite (Development)
+- **Location**: `backend/app.db`
+- **Auto-creation**: Tables and demo users created on first startup
+- **Persistence**: Data persists between app restarts
+
+### Inspecting Database
+```bash
+sqlite3 backend/app.db ".tables"
+sqlite3 backend/app.db "SELECT name, email FROM users;"
+sqlite3 backend/app.db "SELECT name, location FROM events;"
 
 ## Docker
 
