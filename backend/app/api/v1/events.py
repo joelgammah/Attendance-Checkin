@@ -91,6 +91,34 @@ class AttendanceOut(BaseModel):
         from_attributes = True
 
 
+class MyCheckInOut(BaseModel):
+    id: int
+    event_id: int
+    checked_in_at: datetime
+    event_name: str
+    event_location: str
+    event_start_time: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/my-checkins", response_model=List[MyCheckInOut])
+def my_checkins(db: Session = Depends(get_db), user = Depends(get_current_user)):
+    """Get current user's check-in history"""
+    checkins = att_repo.get_by_attendee(db, user.id)
+    return [
+        MyCheckInOut(
+            id=att.id,
+            event_id=att.event_id,
+            checked_in_at=att.checked_in_at,
+            event_name=att.event.name,
+            event_location=att.event.location,
+            event_start_time=att.event.start_time
+        ) for att in checkins
+    ]
+
+
 @router.post("/checkin", response_model=AttendanceOut)
 def check_in(req: CheckInRequest, db: Session = Depends(get_db), user = Depends(get_current_user)):
     event = event_repo.get_by_token(db, req.event_token)

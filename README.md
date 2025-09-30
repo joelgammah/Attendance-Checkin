@@ -59,11 +59,11 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 	```
 
 ### Demo Login
-- Organizer: `grayj@wofford.edu` / `grayj`
-- Organizer: `clublead@wofford.edu` / `clublead`
-- Attendee: `gammahja@wofford.edu` / `gammahja`
-- Attendee: `martincs@wofford.edu` / `martincs`
-- Attendee: `podrebarack@wofford.edu` / `podrebarack`
+- Organizer: `grayj@wofford.edu`
+- Organizer: `clublead@wofford.edu`
+- Attendee: `gammahja@wofford.edu`
+- Attendee: `martincs@wofford.edu`
+- Attendee: `podrebarackc@wofford.edu`
 
 ## Tests & Coverage
 
@@ -93,6 +93,7 @@ Coverage report in `frontend/coverage/index.html`.
 sqlite3 backend/app.db ".tables"
 sqlite3 backend/app.db "SELECT name, email FROM users;"
 sqlite3 backend/app.db "SELECT name, location FROM events;"
+```
 
 ## Docker
 
