@@ -6,42 +6,201 @@ import type { EventOut } from '../types'
 export default function DashboardPage(){
   const [upcoming, setUpcoming] = React.useState<EventOut[]>([])
   const [past, setPast] = React.useState<EventOut[]>([])
-  React.useEffect(()=>{ (async()=>{ setUpcoming(await myUpcoming()); setPast(await myPast()) })() },[])
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(()=>{ 
+    (async()=>{ 
+      try {
+        const [upcomingEvents, pastEvents] = await Promise.all([
+          myUpcoming(), 
+          myPast()
+        ])
+        setUpcoming(upcomingEvents)
+        setPast(pastEvents)
+      } catch (error) {
+        console.error('Failed to load events:', error)
+      } finally {
+        setLoading(false)
+      }
+    })() 
+  },[])
+
+  if (loading) {
+    return (
+      <div>
+        <Nav />
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="flex items-center space-x-3">
+            <svg className="animate-spin w-6 h-6" style={{color: '#95866A'}} fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <span className="text-gray-600">Loading your events...</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <Nav />
-      <div className="p-4 grid gap-6">
-        <section>
-          <h2 className="text-xl font-semibold mb-2">Upcoming Events</h2>
-          <EventList items={upcoming} />
-        </section>
-        <section>
-          <h2 className="text-xl font-semibold mb-2">Past Events</h2>
-          <EventList items={past} showCsv />
-        </section>
+      
+      {/* Header Section */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Event Dashboard</h1>
+            <p className="mt-2 text-gray-600">Manage your events and track attendance</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid gap-8">
+          
+          {/* Upcoming Events Section */}
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)'}}>
+                  <svg className="w-5 h-5" style={{color: '#95866A'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">Upcoming Events</h2>
+              </div>
+              <span className="px-3 py-1 text-sm font-medium rounded-full" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}>
+                {upcoming.length} events
+              </span>
+            </div>
+            <EventList items={upcoming} />
+          </section>
+
+          {/* Past Events Section */}
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)'}}>
+                  <svg className="w-5 h-5" style={{color: '#95866A'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">Past Events</h2>
+              </div>
+              <span className="px-3 py-1 text-sm font-medium rounded-full" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}>
+                {past.length} events
+              </span>
+            </div>
+            <EventList items={past} showCsv />
+          </section>
+        </div>
       </div>
     </div>
   )
 }
 
 function EventList({ items, showCsv=false }: { items: EventOut[]; showCsv?: boolean }){
-  if(items.length===0) return <div className="text-gray-600">No events yet.</div>
+  if(items.length === 0) {
+    return (
+      <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+        <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No events yet</h3>
+        <p className="text-gray-600 mb-6">Get started by creating your first event</p>
+        <a
+          href="/events/new"
+          className="inline-flex items-center px-4 py-2 text-white font-medium rounded-lg transition-all duration-200"
+          style={{backgroundColor: '#95866A'}}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#7d6f57';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#95866A';
+          }}
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Create Event
+        </a>
+      </div>
+    )
+  }
+
   return (
-    <ul className="grid gap-3">
+    <div className="grid gap-4">
       {items.map(e=> (
-        <li key={e.id} className="border rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <div className="font-medium">{e.name}</div>
-            <div className="text-sm text-gray-600">{new Date(e.start_time).toLocaleString()} – {new Date(e.end_time).toLocaleString()} @ {e.location}</div>
-            <div className="text-sm">Attendance: {e.attendance_count}</div>
+        <div key={e.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow duration-200">
+          <div className="flex items-start justify-between">
+            {/* Event Info */}
+            <div className="flex-1">
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-lg font-semibold text-gray-900 pr-4">{e.name}</h3>
+                <div className="flex items-center space-x-2 text-sm">
+                  <span className="px-2 py-1 rounded-full text-xs font-medium" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}>
+                    {e.attendance_count} attendees
+                  </span>
+                </div>
+              </div>
+              
+              <div className="space-y-2 text-sm text-gray-600">
+                <div className="flex items-center space-x-2">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span>
+                    {new Date(e.start_time).toLocaleDateString()} at {new Date(e.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} 
+                    {' '} – {' '}
+                    {new Date(e.end_time).toLocaleDateString()} at {new Date(e.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>{e.location}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center space-x-3 ml-4">
+              <a 
+                className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 border border-gray-300 hover:border-gray-400 hover:bg-gray-50" 
+                href={`/events/${e.checkin_token}`}
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1V6a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1zM5 20h2a1 1 0 001-1v-1a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1z" />
+                </svg>
+                Show QR
+              </a>
+              
+              {showCsv && (
+                <a 
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200" 
+                  style={{backgroundColor: '#95866A'}}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#7d6f57';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#95866A';
+                  }}
+                  href={csvUrl(e.id)}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Export CSV
+                </a>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2">
-            <a className="px-3 py-1 rounded bg-gray-100" href={`/events/${e.checkin_token}`}>Show QR</a>
-            {showCsv && <a className="px-3 py-1 rounded bg-gray-100" href={csvUrl(e.id)}>Export CSV</a>}
-          </div>
-        </li>
+        </div>
       ))}
-    </ul>
+    </div>
   )
 }
