@@ -6,6 +6,7 @@ import AttendeeDashboard from './pages/AttendeeDashboard'
 import EventFormPage from './pages/EventFormPage'
 import EventDetailPage from './pages/EventDetailPage'
 import CheckInPage from './pages/CheckInPage'
+import CheckInStart from './pages/CheckInStart'
 import { getUserRole } from './api/auth'
 
 // Minimal router helpers
@@ -39,6 +40,7 @@ export default function App(){
   if(path.startsWith('/login')) return <LoginPage />
   if(path.startsWith('/events/new')) return <Protected><EventFormPage /></Protected>
   if(path.startsWith('/events/')) return <Protected><EventDetailPage /></Protected>
+  if(path === '/checkin/start') return <CheckInStart />
   if(path.startsWith('/checkin')) return <CheckInPage />
   return <Protected><ProtectedDashboard /></Protected>
 }
