@@ -51,7 +51,7 @@ export default function AttendeeDashboard() {
         {/* Navigation Links */}
         <div className="flex items-center space-x-1">
           <Link 
-            to="/checkin" 
+            to="/checkin/start" 
             className="px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:text-gray-900 transition-colors duration-200"
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.1)';
@@ -138,7 +138,7 @@ export default function AttendeeDashboard() {
             </p>
             
             <Link 
-              to="/checkin" 
+              to="/checkin/start" 
               className="inline-flex items-center px-6 py-3 text-white font-medium rounded-lg transition-all duration-200 active:scale-95"
               style={{backgroundColor: '#95866A'}}
               onMouseEnter={(e) => {
