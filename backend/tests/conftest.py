@@ -1,39 +1,63 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from app.main import app
-from app.db.session import SessionLocal
+from app.api.deps import get_db
 from app.models.base import Base
-from sqlalchemy import delete
-from app.models.event import Event
-from app.models.attendance import Attendance
+from app.models.user import User, UserRole
+from app.core.security import get_password_hash
 
-# Use a separate in-memory DB for tests
-engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-
-@pytest.fixture(autouse=True)
-def clear_event_data_between_tests():
-    """
-    Ensure event-related tables are cleared between tests so each test runs with a clean slate.
-    Keeps seeded users intact (don't drop all tables).
-    """
-    with SessionLocal() as s:
-        s.execute(delete(Attendance))
-        s.execute(delete(Event))
-        s.commit()
-    yield
+# Simple test database
+SQLITE_DATABASE_URL = "sqlite:///./test.db"
+engine = create_engine(SQLITE_DATABASE_URL, connect_args={"check_same_thread": False})
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-@pytest.fixture(autouse=True)
-def _setup_db(monkeypatch):
+def override_get_db():
+    """Simple database override for tests."""
+    try:
+        db = TestingSessionLocal()
+        yield db
+    finally:
+        db.close()
+
+
+@pytest.fixture(scope="function", autouse=True)
+def setup_test_db():
+    """Create fresh test database for each test."""
+    # Create tables
     Base.metadata.create_all(bind=engine)
-    # Patch SessionLocal used by the app
-    monkeypatch.setattr("app.db.session.SessionLocal", TestingSessionLocal)
-    # trigger startup seed
-    with TestClient(app):
-        yield
+    
+    # Add test users
+    db = TestingSessionLocal()
+    demo_users = [
+        ("grayj@wofford.edu", "John Gray", UserRole.ORGANIZER),
+        ("clublead@wofford.edu", "Club Lead", UserRole.ORGANIZER),
+        ("martincs@wofford.edu", "Collin Martin", UserRole.ATTENDEE),
+        ("podrebarackc@wofford.edu", "Kate Podrebarac", UserRole.ATTENDEE),
+        ("gammahja@wofford.edu", "Joel Gammah", UserRole.ATTENDEE),
+    ]
+    
+    for email, name, role in demo_users:
+        user = User(
+            email=email, 
+            name=name, 
+            role=role, 
+            password_hash=get_password_hash(email.split("@")[0])
+        )
+        db.add(user)
+    db.commit()
+    db.close()
+    
+    # Override the dependency
+    app.dependency_overrides[get_db] = override_get_db
+    
+    yield
+    
+    # Clean up
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture
@@ -49,10 +73,7 @@ def token_organizer(client):
 
 @pytest.fixture
 def token_student(client):
-    # Use one of the demo users seeded in app.on_startup (see app.main.on_startup)
-    # seeded students include: martincs@wofford.edu, podrebarackc@wofford.edu, gammahja@wofford.edu
     res = client.post("/api/v1/auth/login", json={"email": "martincs@wofford.edu", "password": "martincs"})
-    # If login failed the JSON will contain a 'detail' message; surface it for easier debugging
     j = res.json()
     assert res.status_code == 200, f"login failed for test student: {j}"
     return j["access_token"]

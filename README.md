@@ -70,7 +70,7 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 ### Backend
 ```bash
 cd backend
-pytest -q --cov=app --cov-report=term-missing:skip-covered --cov-report=html --cov-fail-under=80
+python -m pytest -q --cov=app --cov-report=term-missing:skip-covered --cov-report=html --cov-fail-under=80
 ```
 HTML report in `backend/htmlcov/index.html`.
 
