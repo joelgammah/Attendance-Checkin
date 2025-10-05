@@ -6,9 +6,13 @@ export default defineConfig({
   server: { port: 5173, proxy: { '/api': 'http://localhost:8000' } },
   test: {
     environment: 'jsdom',
-    setupFiles: './test_setup.ts',
+    setupFiles: ['./src/test/setup.ts'],
     globals: true,
     css: true,
-    coverage: { provider: 'v8', reporter: ['text','html','lcov'], reportsDirectory: 'coverage' }
+    coverage: { 
+      provider: 'v8', 
+      reporter: ['text', 'html', 'lcov'], 
+      reportsDirectory: 'coverage' 
+    }
   }
 })
