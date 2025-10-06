@@ -350,5 +350,55 @@ describe('DashboardPage Coverage Tests', () => {
         expect(screen.getByTestId('nav')).toBeInTheDocument()
       })
     })
+
+    it('shows "Check In ended" for past events', async () => {
+      const pastEvents = [
+        {
+          id: 1,
+          name: 'Past Event',
+          location: 'Location',
+          start_time: '2023-01-01T10:00:00Z',
+          end_time: '2023-01-01T12:00:00Z',
+          attendance_count: 5,
+          checkin_token: 'past-token'
+        }
+      ]
+      
+      mockMyUpcoming.mockResolvedValue([])
+      mockMyPast.mockResolvedValue(pastEvents)
+      
+      render(<DashboardPage />)
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('nav')).toBeInTheDocument()
+        // The "Check In ended" text should be present for past events
+        expect(screen.getByText('Check In ended')).toBeInTheDocument()
+      })
+    })
+
+    it('shows "Show QR" for future events', async () => {
+      const futureEvents = [
+        {
+          id: 1,
+          name: 'Future Event',
+          location: 'Location',
+          start_time: '2026-01-01T10:00:00Z',
+          end_time: '2026-01-01T12:00:00Z',
+          attendance_count: 0,
+          checkin_token: 'future-token'
+        }
+      ]
+      
+      mockMyUpcoming.mockResolvedValue(futureEvents)
+      mockMyPast.mockResolvedValue([])
+      
+      render(<DashboardPage />)
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('nav')).toBeInTheDocument()
+        // The "Show QR" text should be present for future events
+        expect(screen.getByText('Show QR')).toBeInTheDocument()
+      })
+    })
   })
 })

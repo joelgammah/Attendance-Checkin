@@ -145,7 +145,14 @@ export default function EventDetailPage() {
                   </svg>
                   <div>
                     <p className="text-sm font-medium text-gray-700">Start Time</p>
-                    <p className="text-gray-900">{new Date(event.start_time).toLocaleString()}</p>
+                    <p className="text-gray-900">{new Date(event.start_time).toLocaleString(undefined, {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZoneName: 'short'
+                    })}</p>
                   </div>
                 </div>
                 
@@ -155,7 +162,14 @@ export default function EventDetailPage() {
                   </svg>
                   <div>
                     <p className="text-sm font-medium text-gray-700">End Time</p>
-                    <p className="text-gray-900">{new Date(event.end_time).toLocaleString()}</p>
+                    <p className="text-gray-900">{new Date(event.end_time).toLocaleString(undefined, {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZoneName: 'short'
+                    })}</p>
                   </div>
                 </div>
               </div>
