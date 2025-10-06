@@ -6,6 +6,28 @@ export default function LoginPage(){
   const [password, setPassword] = React.useState('grayj')
   const [error, setError] = React.useState('')
   const [loading, setLoading] = React.useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = React.useState(0)
+
+  // Array of images to cycle through
+  const images = [
+    '/images/ui/login-1.jpg',
+    '/images/ui/login-2.jpg',
+    '/images/ui/login-3.jpg',
+    '/images/ui/login-4.jpg',
+    '/images/ui/login-5.jpg',
+    '/images/ui/login-6.jpg',
+  ]
+
+  // Change image every 7 seconds
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => 
+        (prevIndex + 1) % images.length
+      )
+    }, 7000) // 7 seconds
+
+    return () => clearInterval(interval) // Cleanup on unmount
+  }, [images.length])
 
   async function onSubmit(e: React.FormEvent){
     e.preventDefault()
@@ -26,8 +48,18 @@ export default function LoginPage(){
       } else {
         location.href = '/'  // Default fallback
       }
-    } catch(err: any) { 
-      setError(err.message)
+    } catch(err: any) {
+      let errorMessage = 'Login failed'
+
+      try {
+        // Try to parse the JSON string in err.message
+        const errorData = JSON.parse(err.message)
+        errorMessage = errorData.detail || errorMessage
+      } catch {
+        // If parsing fails, just use the error.message or fallback
+        errorMessage = err.message || errorMessage  
+      }
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -37,7 +69,7 @@ export default function LoginPage(){
     <div className="min-h-screen flex">
       {/* Left Side - Login Form */}
       <div className="flex-1 flex items-center justify-center p-8 bg-white">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md p-8 rounded-2xl border border-gray-200 shadow-lg bg-white">
           {/* Header */}
           <div className="mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-6" style={{backgroundColor: '#95866A'}}>
@@ -53,13 +85,21 @@ export default function LoginPage(){
           <form onSubmit={onSubmit} className="space-y-6">
             {/* Error Alert */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3" role="alert">
-                <svg className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              <div className="rounded-lg p-4 flex items-start space-x-3" 
+                  style={{
+                    backgroundColor: 'rgba(149, 134, 106, 0.1)',
+                    borderColor: 'rgba(149, 134, 106, 0.3)',
+                    borderWidth: '1px'
+                  }} 
+                  role="alert">
+                <svg className="w-5 h-5 mt-0.5 flex-shrink-0" 
+                    style={{color: '#95866A'}} 
+                    fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
                 <div>
-                  <h3 className="text-sm font-medium text-red-800">Authentication failed</h3>
-                  <p className="text-sm text-red-700 mt-1">{error}</p>
+                  <h3 className="text-sm font-medium" style={{color: '#6b5a47'}}>Authentication failed</h3>
+                  <p className="text-sm mt-1" style={{color: '#7d6f57'}}>{error}</p>
                 </div>
               </div>
             )}
@@ -163,33 +203,60 @@ export default function LoginPage(){
         </div>
       </div>
 
-      {/* Right Side - Image */}
-      <div className="flex-1 relative rounded-tr-3xl rounded-bl-3xl overflow-hidden" style={{borderTopLeftRadius: '8rem', borderBottomRightRadius: '8rem'}}>
-        <img 
-          src="/images/ui/login-1.jpg" 
-          alt="Terrier Check-In" 
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        {/* Optional: Add subtle overlay with your custom color */}
-        <div className="absolute inset-0" style={{backgroundColor: 'rgba(149, 134, 106, 0.2)'}}></div>
-        <div className="relative h-full flex items-center justify-center p-12">
-          <div className="text-center text-white">
-            <h2 className="text-4xl font-bold mb-4">Terrier Check-In</h2>
-            <p className="text-xl mb-8 opacity-90">
-              Experience seamless event check-ins.
-            </p>
-            <div className="flex items-center justify-center space-x-4 text-sm opacity-75">
-              <div className="flex items-center space-x-2">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>Fast & Secure</span>
+      {/* Right Side - Image Carousel */}
+      <div className="hidden lg:block flex-1 p-0 pr-4 pb-4 pt-4 lg:pr-6 lg:pb-6 lg:pt-6 xl:pr-8 xl:pb-8 xl:pt-8">
+        {/* Rounded Corners with Overflow Hidden */}
+        <div className="h-full relative rounded-tr-3xl rounded-bl-3xl overflow-hidden" style={{borderTopLeftRadius: '8rem', borderBottomRightRadius: '8rem'}}>
+          {images.map((imageSrc, index) => (
+            <img 
+              key={index}
+              src={imageSrc} 
+              alt={`Terrier Check-In ${index + 1}`}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+                index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          ))}
+          
+          {/* Overlay */}
+          <div className="absolute inset-0" style={{backgroundColor: 'rgba(149, 134, 106, 0.2)'}}></div>
+          
+          {/* Content */}
+          <div className="relative h-full flex items-center justify-center p-12">
+            <div className="text-center text-white">
+              <h2 className="text-4xl font-bold mb-4">Terrier Check-In</h2>
+              <p className="text-xl mb-8 opacity-90">
+                Experience seamless event check-ins.
+              </p>
+              <div className="flex items-center justify-center space-x-4 text-sm opacity-75">
+                <div className="flex items-center space-x-2">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>Fast & Secure</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>Easy to Use</span>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>Easy to Use</span>
+              
+              {/* Image Indicator Dots */}
+              <div className="flex justify-center space-x-2 mt-8">
+                {images.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      index === currentImageIndex 
+                        ? 'bg-white scale-125' 
+                        : 'bg-white/50 hover:bg-white/75'
+                    }`}
+                    aria-label={`Go to image ${index + 1}`}
+                  />
+                ))}
               </div>
             </div>
           </div>

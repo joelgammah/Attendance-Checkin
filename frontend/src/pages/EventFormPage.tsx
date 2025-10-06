@@ -15,7 +15,13 @@ export default function EventFormPage(){
     setError('')
     
     try {
-      const payload = { ...form, start_time: new Date(form.start_time).toISOString(), end_time: new Date(form.end_time).toISOString() }
+      // Simply convert the datetime-local values to ISO strings
+      // The backend will handle timezone conversion properly
+      const payload = { 
+        ...form, 
+        start_time: new Date(form.start_time).toISOString(), 
+        end_time: new Date(form.end_time).toISOString() 
+      }
       const ev = await createEvent(payload)
       location.href = `/events/${ev.checkin_token}`
     } catch(err:any){ 

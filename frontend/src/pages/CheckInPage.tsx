@@ -184,15 +184,6 @@ export default function CheckInPage(){
                     </svg>
                     Go to Dashboard
                   </a>
-                  
-                  <div>
-                    <button
-                      onClick={() => window.close()}
-                      className="text-gray-600 hover:text-gray-900 text-sm transition-colors duration-200"
-                    >
-                      Close this window
-                    </button>
-                  </div>
                 </div>
               </div>
             )}
