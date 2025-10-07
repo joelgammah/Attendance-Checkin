@@ -7,6 +7,17 @@ export default function DashboardPage(){
   const [upcoming, setUpcoming] = React.useState<EventOut[]>([])
   const [past, setPast] = React.useState<EventOut[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [showNotification, setShowNotification] = React.useState(false)
+  const [notificationMessage, setNotificationMessage] = React.useState('')
+
+  // Show notification and auto-hide after 5 seconds
+  const showSuccessNotification = (message: string) => {
+    setNotificationMessage(message)
+    setShowNotification(true)
+    setTimeout(() => {
+      setShowNotification(false)
+    }, 7000)
+  }
 
   React.useEffect(()=>{ 
     (async()=>{ 
@@ -25,15 +36,16 @@ export default function DashboardPage(){
     })() 
   },[])
 
-  const handleCsvClick = React.useCallback((id: number) => async (e: React.MouseEvent) => { // ADD
+  const handleCsvClick = React.useCallback((id: number, eventName: string) => async (e: React.MouseEvent) => {
     e.preventDefault()
     try {
-      await downloadAttendanceCsv(id)
+      await downloadAttendanceCsv(id, eventName)
+      showSuccessNotification(`Attendance report for "${eventName}" has been downloaded!`)
     } catch (err) {
       console.error('CSV download failed', err)
-      alert('Authorization required or download failed.')
+      showSuccessNotification('Failed to export CSV. Please try again.')
     }
-  }, [])
+  }, [showSuccessNotification])
 
   if (loading) {
     return (
@@ -116,6 +128,33 @@ export default function DashboardPage(){
           </section>
         </div>
       </div>
+
+      {/* Success Notification Toast */}
+      {showNotification && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 flex items-center space-x-3 max-w-sm">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{backgroundColor: 'rgba(34, 197, 94, 0.1)'}}>
+                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">{notificationMessage}</p>
+            </div>
+            <button 
+              onClick={() => setShowNotification(false)}
+              className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              aria-label="Close notification"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -124,7 +163,7 @@ function EventList(
   { items, showCsv=false, onCsv } : {
     items: EventOut[]
     showCsv?: boolean
-    onCsv?: (id:number)=>(e:React.MouseEvent)=>void | Promise<void>
+    onCsv?: (id:number, eventName:string)=>(e:React.MouseEvent)=>void | Promise<void>
   }
 ){
   if(items.length === 0) {
@@ -182,8 +221,7 @@ function EventList(
                       month: 'short', 
                       day: 'numeric',
                       hour: '2-digit',
-                      minute: '2-digit',
-                      timeZoneName: 'short'
+                      minute: '2-digit'
                     })} 
                     {' '} – {' '}
                     {new Date(e.end_time).toLocaleString(undefined, {
@@ -191,8 +229,7 @@ function EventList(
                       month: 'short',
                       day: 'numeric', 
                       hour: '2-digit',
-                      minute: '2-digit',
-                      timeZoneName: 'short'
+                      minute: '2-digit'
                     })}
                   </span>
                 </div>
@@ -234,7 +271,7 @@ function EventList(
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#7d6f57' }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#95866A' }}
                   href={csvUrl(e.id)}
-                  onClick={onCsv ? onCsv(e.id) : undefined}
+                  onClick={onCsv ? onCsv(e.id, e.name) : undefined}
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

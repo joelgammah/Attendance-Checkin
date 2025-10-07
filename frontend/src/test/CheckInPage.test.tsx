@@ -36,6 +36,198 @@ describe('CheckInPage Improved Coverage', () => {
     vi.clearAllMocks()
   })
 
+  // Add specific assertions for UI elements and state transitions
+  it('renders specific loading state text and spinner', async () => {
+    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockGetByToken.mockImplementation(() => new Promise(() => {})) // Never resolves
+    
+    render(<CheckInPage />)
+    
+    expect(screen.getByText('Finding Event')).toBeInTheDocument()
+    expect(screen.getByText('Please wait while we locate your event...')).toBeInTheDocument()
+    expect(document.querySelector('.animate-spin')).toBeInTheDocument()
+  })
+
+  it('renders error state with specific error messages', async () => {
+    mockUseSearch.mockReturnValue({ token: null })
+    
+    render(<CheckInPage />)
+    
+    await waitFor(() => {
+      expect(screen.getByText('Check-In Failed')).toBeInTheDocument()
+      expect(screen.getByText('No event token provided')).toBeInTheDocument()
+      expect(screen.getByText("We couldn't complete your check-in")).toBeInTheDocument()
+    })
+  })
+
+  it('renders event found state with event details', async () => {
+    const mockEvent = {
+      id: 1,
+      name: 'Test Event',
+      location: 'Test Location',
+      start_time: '2024-01-01T10:00:00Z'
+    }
+    
+    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockGetByToken.mockResolvedValue(mockEvent)
+    mockCheckIn.mockImplementation(() => new Promise(() => {})) // Never resolves to stay in event-found
+    
+    render(<CheckInPage />)
+    
+    await waitFor(() => {
+      expect(screen.getByText('Test Event')).toBeInTheDocument()
+      expect(screen.getByText('Test Location')).toBeInTheDocument()
+      expect(screen.getByText('Preparing to check you in...')).toBeInTheDocument()
+      expect(screen.getByText(/1\/1\/2024/)).toBeInTheDocument()
+    })
+  })
+
+  it('renders checking-in state', async () => {
+    const mockEvent = {
+      id: 1,
+      name: 'Test Event',
+      location: 'Test Location',
+      start_time: '2024-01-01T10:00:00Z'
+    }
+    
+    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockGetByToken.mockResolvedValue(mockEvent)
+    mockCheckIn.mockImplementation(() => new Promise(() => {})) // Hangs in checking-in state
+    
+    render(<CheckInPage />)
+    
+    // Wait for event found first
+    await waitFor(() => {
+      expect(screen.getByText('Test Event')).toBeInTheDocument()
+    })
+    
+    // Wait for checking-in state (after 1500ms timeout)
+    await waitFor(() => {
+      expect(screen.getByText('Checking You In')).toBeInTheDocument()
+      expect(screen.getByText('Almost done...')).toBeInTheDocument()
+    }, { timeout: 2000 })
+  })
+
+  it('renders success state with check-in time', async () => {
+    const mockEvent = {
+      id: 1,
+      name: 'Test Event',
+      location: 'Test Location',
+      start_time: '2024-01-01T10:00:00Z'
+    }
+    
+    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockGetByToken.mockResolvedValue(mockEvent)
+    mockCheckIn.mockResolvedValue({ success: true })
+    
+    render(<CheckInPage />)
+    
+    await waitFor(() => {
+      expect(screen.getByText('Check-In Successful!')).toBeInTheDocument()
+      expect(screen.getByText("You've successfully checked into this event")).toBeInTheDocument()
+      expect(screen.getByText(/Checked in at:/)).toBeInTheDocument()
+      expect(screen.getByText('Go to Dashboard')).toBeInTheDocument()
+    }, { timeout: 3000 })
+  })
+
+  it('renders header with correct text', () => {
+    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockGetByToken.mockImplementation(() => new Promise(() => {}))
+    
+    render(<CheckInPage />)
+    
+    expect(screen.getByText('Event Check-In')).toBeInTheDocument()
+    expect(screen.getByText('Terrier Check-In System')).toBeInTheDocument()
+  })
+
+  it('handles window.location.reload on try again button', async () => {
+    const mockReload = vi.fn()
+    Object.defineProperty(window, 'location', {
+      value: { reload: mockReload },
+      writable: true
+    })
+    
+    mockUseSearch.mockReturnValue({ token: 'invalid-token' })
+    mockGetByToken.mockRejectedValue(new Error('Event not found'))
+    
+    render(<CheckInPage />)
+    
+    await waitFor(() => {
+      const tryAgainButton = screen.getByText('Try Again')
+      fireEvent.click(tryAgainButton)
+      expect(mockReload).toHaveBeenCalled()
+    })
+  })
+
+  it('renders dashboard links with correct href', async () => {
+    mockUseSearch.mockReturnValue({ token: 'invalid-token' })
+    mockGetByToken.mockRejectedValue(new Error('Event not found'))
+    
+    render(<CheckInPage />)
+    
+    await waitFor(() => {
+      const dashboardLink = screen.getByText('Go to Dashboard').closest('a')
+      expect(dashboardLink).toHaveAttribute('href', '/attendee')
+    })
+  })
+
+  it('handles hover effects on buttons', async () => {
+    mockUseSearch.mockReturnValue({ token: 'invalid-token' })
+    mockGetByToken.mockRejectedValue(new Error('Event not found'))
+    
+    render(<CheckInPage />)
+    
+    await waitFor(() => {
+      const tryAgainButton = screen.getByText('Try Again')
+      
+      // Test mouse enter
+      fireEvent.mouseEnter(tryAgainButton)
+      expect(tryAgainButton.style.backgroundColor).toBe('rgb(125, 111, 87)')
+      
+      // Test mouse leave  
+      fireEvent.mouseLeave(tryAgainButton)
+      expect(tryAgainButton.style.backgroundColor).toBe('rgb(149, 134, 106)')
+    })
+  })
+
+  it('handles hover effects on success state dashboard button', async () => {
+    const mockEvent = {
+      id: 1,
+      name: 'Test Event',
+      location: 'Test Location',
+      start_time: '2024-01-01T10:00:00Z'
+    }
+    
+    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockGetByToken.mockResolvedValue(mockEvent)
+    mockCheckIn.mockResolvedValue({ success: true })
+    
+    render(<CheckInPage />)
+    
+    await waitFor(() => {
+      const dashboardButton = screen.getByText('Go to Dashboard')
+      
+      // Test mouse enter on success dashboard button
+      fireEvent.mouseEnter(dashboardButton)
+      expect(dashboardButton.style.backgroundColor).toBe('rgb(125, 111, 87)')
+      
+      // Test mouse leave on success dashboard button
+      fireEvent.mouseLeave(dashboardButton)
+      expect(dashboardButton.style.backgroundColor).toBe('rgb(149, 134, 106)')
+    }, { timeout: 3000 })
+  })
+
+  it('handles error message fallback when no message provided', async () => {
+    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockGetByToken.mockRejectedValue(new Error()) // No message
+    
+    render(<CheckInPage />)
+    
+    await waitFor(() => {
+      expect(screen.getByText('Event not found')).toBeInTheDocument()
+    })
+  })
+
   // Test the loading → event-found → checking-in → success flow
   it('follows complete success flow with timing', async () => {
     const mockEvent = {

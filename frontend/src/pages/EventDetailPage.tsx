@@ -150,8 +150,7 @@ export default function EventDetailPage() {
                       month: 'long',
                       day: 'numeric',
                       hour: '2-digit',
-                      minute: '2-digit',
-                      timeZoneName: 'short'
+                      minute: '2-digit'
                     })}</p>
                   </div>
                 </div>
@@ -167,8 +166,7 @@ export default function EventDetailPage() {
                       month: 'long',
                       day: 'numeric',
                       hour: '2-digit',
-                      minute: '2-digit',
-                      timeZoneName: 'short'
+                      minute: '2-digit'
                     })}</p>
                   </div>
                 </div>
