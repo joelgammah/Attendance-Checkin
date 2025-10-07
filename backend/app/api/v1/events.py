@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 import secrets
 
 from app.api.deps import get_db, get_current_user
-from app.models.user import UserRole
+from app.models.user import UserRole, User
 from app.repositories.event_repo import EventRepository
 from app.repositories.attendance_repo import AttendanceRepository
 from app.models.event import Event
@@ -158,10 +158,24 @@ def export_csv(event_id: int, db: Session = Depends(get_db), user = Depends(get_
     if user.role not in (UserRole.ORGANIZER, UserRole.ADMIN) or event.organizer_id != user.id:
         raise HTTPException(403, "Forbidden")
 
-    rows = att_repo.list_for_event(db, event_id)
-    header = "attendance_id,event_id,attendee_id,checked_in_at\n"
-    body = "".join(f"{r.id},{r.event_id},{r.attendee_id},{r.checked_in_at.isoformat()}\n" for r in rows)
-    return Response(content=header + body, media_type="text/csv")
+    # Includes attendee name & email
+    records = (
+        db.query(Attendance, User)
+        .join(User, Attendance.attendee_id == User.id)
+        .filter(Attendance.event_id == event_id)
+        .order_by(Attendance.checked_in_at.asc())
+        .all()
+    )
+
+    header = "attendance_id,event_id,attendee_id,attendee_name,attendee_email,checked_in_at\n"
+    body_lines = []
+    for att, usr in records:
+        body_lines.append(
+            f"{att.id},{att.event_id},{att.attendee_id},"
+            f"{(usr.name or '').replace(',', ' ')},{(usr.email or '')},{att.checked_in_at.isoformat()}"
+        )
+    body = header + "\n".join(body_lines) + ("\n" if body_lines else "")
+    return Response(content=body, media_type="text/csv")
 
 
 @router.get("/by-token/{token}", response_model=EventOut)
