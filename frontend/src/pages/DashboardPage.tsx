@@ -1,6 +1,6 @@
 import React from 'react'
-import Nav from '../components/Nav'
-import { myUpcoming, myPast, csvUrl } from '../api/events'
+import Nav from '../components/Nav' 
+import { myUpcoming, myPast, csvUrl, downloadAttendanceCsv } from '../api/events' // ADD downloadAttendanceCsv
 import type { EventOut } from '../types'
 
 export default function DashboardPage(){
@@ -24,6 +24,16 @@ export default function DashboardPage(){
       }
     })() 
   },[])
+
+  const handleCsvClick = React.useCallback((id: number) => async (e: React.MouseEvent) => { // ADD
+    e.preventDefault()
+    try {
+      await downloadAttendanceCsv(id)
+    } catch (err) {
+      console.error('CSV download failed', err)
+      alert('Authorization required or download failed.')
+    }
+  }, [])
 
   if (loading) {
     return (
@@ -102,7 +112,7 @@ export default function DashboardPage(){
                 {past.length} events
               </span>
             </div>
-            <EventList items={past} showCsv />
+            <EventList items={past} showCsv onCsv={handleCsvClick} />  {/* ADD pass handler */}
           </section>
         </div>
       </div>
@@ -110,7 +120,13 @@ export default function DashboardPage(){
   )
 }
 
-function EventList({ items, showCsv=false }: { items: EventOut[]; showCsv?: boolean }){
+function EventList(
+  { items, showCsv=false, onCsv } : {
+    items: EventOut[]
+    showCsv?: boolean
+    onCsv?: (id:number)=>(e:React.MouseEvent)=>void | Promise<void>
+  }
+){
   if(items.length === 0) {
     return (
       <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
@@ -212,16 +228,13 @@ function EventList({ items, showCsv=false }: { items: EventOut[]; showCsv?: bool
               )}
               
               {showCsv && (
-                <a 
-                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200" 
+                <a
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200"
                   style={{backgroundColor: '#95866A'}}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#7d6f57';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#95866A';
-                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#7d6f57' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#95866A' }}
                   href={csvUrl(e.id)}
+                  onClick={onCsv ? onCsv(e.id) : undefined}
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
