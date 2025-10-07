@@ -4,6 +4,7 @@ from typing import List
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 import secrets
+import re
 
 from app.api.deps import get_db, get_current_user
 from app.models.user import UserRole, User
@@ -158,23 +159,47 @@ def export_csv(event_id: int, db: Session = Depends(get_db), user = Depends(get_
     if user.role not in (UserRole.ORGANIZER, UserRole.ADMIN) or event.organizer_id != user.id:
         raise HTTPException(403, "Forbidden")
 
-    # Includes attendee name & email
+    # EXCLUDE organizer (do not list the event creator in the CSV)
     records = (
         db.query(Attendance, User)
         .join(User, Attendance.attendee_id == User.id)
-        .filter(Attendance.event_id == event_id)
+        .filter(
+            Attendance.event_id == event_id,
+            Attendance.attendee_id != event.organizer_id  # <-- exclude organizer
+        )
         .order_by(Attendance.checked_in_at.asc())
         .all()
     )
 
-    header = "attendance_id,event_id,attendee_id,attendee_name,attendee_email,checked_in_at\n"
-    body_lines = []
+    def esc(val: str | None):
+        if val is None:
+            return ""
+        s = str(val)
+        if '"' in s:
+            s = s.replace('"', '""')
+        if ',' in s or '"' in s:
+            return f'"{s}"'
+        return s
+
+    header = "Event Name,Event Location,Attendee ID,Attendee Name,Attendee Email,Date/Time Checked In\n"
+    ev_name = esc(getattr(event, "name", "") or "")
+    ev_loc = esc(getattr(event, "location", "") or "")  # existing line (kept)
+
+    # ADD: Normalize location to insert comma before 2‑letter state if missing (e.g. "Spartanburg SC" -> "Spartanburg, SC")
+    raw_location = getattr(event, "location", "") or ""
+    if raw_location and "," not in raw_location:
+        m = re.match(r"^(?P<city>.+?)\s(?P<state>[A-Z]{2})(?:,\s*USA)?$", raw_location)
+        if m:
+            formatted = f"{m.group('city').rstrip()}, {m.group('state')}"
+            ev_loc = esc(formatted)
+
+    lines: list[str] = []
     for att, usr in records:
-        body_lines.append(
-            f"{att.id},{att.event_id},{att.attendee_id},"
-            f"{(usr.name or '').replace(',', ' ')},{(usr.email or '')},{att.checked_in_at.isoformat()}"
+        lines.append(
+            f"{ev_name},{ev_loc},{att.attendee_id},{esc(usr.name)},{esc(usr.email)},{att.checked_in_at.isoformat()}"
         )
-    body = header + "\n".join(body_lines) + ("\n" if body_lines else "")
+
+    body = header + "\n".join(lines) + ("\n" if lines else "")
     return Response(content=body, media_type="text/csv")
 
 
