@@ -199,8 +199,22 @@ def export_csv(event_id: int, db: Session = Depends(get_db), user = Depends(get_
             f"{ev_name},{ev_loc},{att.attendee_id},{esc(usr.name)},{esc(usr.email)},{att.checked_in_at.isoformat()}"
         )
 
-    body = header + "\n".join(lines) + ("\n" if lines else "")
-    return Response(content=body, media_type="text/csv")
+    # Get organizer information
+    organizer = db.query(User).filter(User.id == event.organizer_id).first()
+    organizer_name = organizer.name if organizer else "Unknown"
+    total_attendance = len(records)
+
+    # Build CSV with summary at the end
+    csv_body = header + "\n" + "\n".join(lines)
+    if lines:
+        csv_body += "\n"
+    
+    # Add blank line and summary in columns
+    csv_body += "\n"
+    csv_body += f"Organizer Name:,{esc(organizer_name)}\n"
+    csv_body += f"Total Attendance:,{total_attendance}\n"
+
+    return Response(content=csv_body, media_type="text/csv")
 
 
 @router.get("/by-token/{token}", response_model=EventOut)

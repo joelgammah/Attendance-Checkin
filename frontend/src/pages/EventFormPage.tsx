@@ -15,12 +15,13 @@ export default function EventFormPage(){
     setError('')
     
     try {
-      // Simply convert the datetime-local values to ISO strings
-      // The backend will handle timezone conversion properly
+      // Send datetime strings without conversion + user's timezone
+      // Backend will handle proper timezone conversion to UTC
       const payload = { 
         ...form, 
-        start_time: new Date(form.start_time).toISOString(), 
-        end_time: new Date(form.end_time).toISOString() 
+        start_time: form.start_time, // Keep as datetime-local string
+        end_time: form.end_time,     // Keep as datetime-local string
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone // User's timezone
       }
       const ev = await createEvent(payload)
       location.href = `/events/${ev.checkin_token}`

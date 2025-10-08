@@ -17,7 +17,11 @@ def test_checkin_flow(client: TestClient, token_organizer: str, token_student: s
 
     csv = client.get(f"/api/v1/events/{ev['id']}/attendance.csv", headers=h)
     assert csv.status_code == 200
-    assert "attendee_id" in csv.text
+    # Validate enhanced CSV format with proper headers and summary
+    csv_content = csv.text
+    assert "Event Name,Event Location,Attendee ID,Attendee Name,Attendee Email,Date/Time Checked In" in csv_content
+    assert "Organizer Name:" in csv_content
+    assert "Total Attendance:" in csv_content
 
 
 def test_my_checkins(client: TestClient, token_organizer: str, token_student: str):
