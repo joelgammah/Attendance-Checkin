@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from typing import List
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 import secrets
 import re
 
@@ -24,18 +25,19 @@ att_repo = AttendanceRepository()
 class EventCreate(BaseModel):
     name: str
     location: str
-    start_time: datetime
-    end_time: datetime
+    start_time: str  # Changed to string to handle datetime-local input
+    end_time: str    # Changed to string to handle datetime-local input
     notes: str | None = None
     checkin_open_minutes: int | None = None
+    timezone: str = "America/New_York"  # Added timezone field
 
 
 class EventOut(BaseModel):
     id: int
     name: str
     location: str
-    start_time: datetime
-    end_time: datetime
+    start_time: str  # Changed from datetime to str for explicit UTC format
+    end_time: str    # Changed from datetime to str for explicit UTC format
     notes: str | None
     checkin_open_minutes: int
     checkin_token: str
@@ -49,33 +51,87 @@ class EventOut(BaseModel):
 def create_event(payload: EventCreate, db: Session = Depends(get_db), user = Depends(get_current_user)):
     if user.role not in (UserRole.ORGANIZER, UserRole.ADMIN):
         raise HTTPException(403, "Only organizers can create events")
-    token = secrets.token_urlsafe(16)
-    event = event_repo.create(
-        db,
-        name=payload.name,
-        location=payload.location,
-        start_time=payload.start_time,
-        end_time=payload.end_time,
-        notes=payload.notes,
-        checkin_open_minutes=payload.checkin_open_minutes or settings.DEFAULT_CHECKIN_OPEN_MINUTES,
-        checkin_token=token,
-        organizer_id=user.id,
-    )
-    db.commit()
-    db.refresh(event)
-    return EventOut.model_validate({**event.__dict__, "attendance_count": 0})
+    
+    try:
+        # Parse naive datetime from frontend
+        start_naive = datetime.fromisoformat(payload.start_time)
+        end_naive = datetime.fromisoformat(payload.end_time)
+        
+        # Apply user's timezone (from frontend)
+        user_timezone = ZoneInfo(payload.timezone)  # "America/New_York"
+        start_local = start_naive.replace(tzinfo=user_timezone)
+        end_local = end_naive.replace(tzinfo=user_timezone)
+        
+        # Convert to UTC for storage
+        start_utc = start_local.astimezone(timezone.utc)
+        end_utc = end_local.astimezone(timezone.utc)
+        
+        # Validation
+        if start_utc >= end_utc:
+            raise HTTPException(400, "Start time must be before end time")
+            
+        token = secrets.token_urlsafe(16)
+        event = event_repo.create(
+            db,
+            name=payload.name,
+            location=payload.location,
+            start_time=start_utc,  # Store UTC time
+            end_time=end_utc,      # Store UTC time
+            notes=payload.notes,
+            checkin_open_minutes=payload.checkin_open_minutes or settings.DEFAULT_CHECKIN_OPEN_MINUTES,
+            checkin_token=token,
+            organizer_id=user.id,
+        )
+        db.commit()
+        db.refresh(event)
+        return EventOut(
+            id=event.id,
+            name=event.name,
+            location=event.location,
+            start_time=start_utc.isoformat() + "Z",
+            end_time=end_utc.isoformat() + "Z",
+            notes=event.notes,
+            checkin_open_minutes=event.checkin_open_minutes,
+            checkin_token=event.checkin_token,
+            attendance_count=0
+        )
+        
+    except ValueError as e:
+        raise HTTPException(400, f"Invalid datetime format: {str(e)}")
+    except Exception as e:
+        raise HTTPException(500, f"Error creating event: {str(e)}")
 
 
 @router.get("/mine/upcoming", response_model=List[EventOut])
 def my_upcoming(db: Session = Depends(get_db), user = Depends(get_current_user)):
     items = event_repo.upcoming_for_organizer(db, user.id)
-    return [EventOut.model_validate({**e.__dict__, "attendance_count": att_repo.count_for_event(db, e.id)}) for e in items]
+    return [EventOut(
+        id=e.id,
+        name=e.name,
+        location=e.location,
+        start_time=e.start_time.isoformat() + "Z",
+        end_time=e.end_time.isoformat() + "Z",
+        notes=e.notes,
+        checkin_open_minutes=e.checkin_open_minutes,
+        checkin_token=e.checkin_token,
+        attendance_count=att_repo.count_for_event(db, e.id)
+    ) for e in items]
 
 
 @router.get("/mine/past", response_model=List[EventOut])
 def my_past(db: Session = Depends(get_db), user = Depends(get_current_user)):
     items = event_repo.past_for_organizer(db, user.id)
-    return [EventOut.model_validate({**e.__dict__, "attendance_count": att_repo.count_for_event(db, e.id)}) for e in items]
+    return [EventOut(
+        id=e.id,
+        name=e.name,
+        location=e.location,
+        start_time=e.start_time.isoformat() + "Z",
+        end_time=e.end_time.isoformat() + "Z",
+        notes=e.notes,
+        checkin_open_minutes=e.checkin_open_minutes,
+        checkin_token=e.checkin_token,
+        attendance_count=att_repo.count_for_event(db, e.id)
+    ) for e in items]
 
 
 class CheckInRequest(BaseModel):
@@ -95,10 +151,10 @@ class AttendanceOut(BaseModel):
 class MyCheckInOut(BaseModel):
     id: int
     event_id: int
-    checked_in_at: datetime
+    checked_in_at: str  # Changed from datetime to str for explicit UTC format
     event_name: str
     event_location: str
-    event_start_time: datetime
+    event_start_time: str  # Changed from datetime to str for explicit UTC format
 
     class Config:
         from_attributes = True
@@ -112,10 +168,10 @@ def my_checkins(db: Session = Depends(get_db), user = Depends(get_current_user))
         MyCheckInOut(
             id=att.id,
             event_id=att.event_id,
-            checked_in_at=att.checked_in_at,
+            checked_in_at=att.checked_in_at.isoformat() + "Z",
             event_name=att.event.name,
             event_location=att.event.location,
-            event_start_time=att.event.start_time
+            event_start_time=att.event.start_time.isoformat() + "Z"
         ) for att in checkins
     ]
 
@@ -205,7 +261,7 @@ def export_csv(event_id: int, db: Session = Depends(get_db), user = Depends(get_
     total_attendance = len(records)
 
     # Build CSV with summary at the end
-    csv_body = header + "\n" + "\n".join(lines)
+    csv_body = header + "\n".join(lines)
     if lines:
         csv_body += "\n"
     
@@ -223,4 +279,14 @@ def get_by_token(token: str, db: Session = Depends(get_db), user = Depends(get_c
     if not e:
         raise HTTPException(404, "Event not found")
     count = att_repo.count_for_event(db, e.id)
-    return EventOut.model_validate({**e.__dict__, "attendance_count": count})
+    return EventOut(
+        id=e.id,
+        name=e.name,
+        location=e.location,
+        start_time=e.start_time.isoformat() + "Z",
+        end_time=e.end_time.isoformat() + "Z",
+        notes=e.notes,
+        checkin_open_minutes=e.checkin_open_minutes,
+        checkin_token=e.checkin_token,
+        attendance_count=count
+    )
