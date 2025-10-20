@@ -265,3 +265,7 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 *.db
+
+# macOS
+.DS_Store
+**/.DS_Store
