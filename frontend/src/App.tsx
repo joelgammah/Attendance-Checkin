@@ -7,7 +7,7 @@ import EventFormPage from './pages/EventFormPage'
 import EventDetailPage from './pages/EventDetailPage'
 import CheckInPage from './pages/CheckInPage'
 import CheckInStart from './pages/CheckInStart'
-import { getUserRole } from './api/auth'
+import { getActiveRole } from './api/auth'
 
 // Minimal router helpers
 function usePath(){ return location.pathname }
@@ -24,9 +24,9 @@ export function useSearch(){
 export { useParams as useParams_compat, useSearch as useSearch_compat }
 
 function ProtectedDashboard() {
-  const role = getUserRole()
+  const role = getActiveRole()
   
-  // Route based on user role
+  // Route based on user role (uses active role which can be switched)
   if (role === 'attendee') {
     return <AttendeeDashboard />
   } else {
@@ -38,8 +38,8 @@ function ProtectedDashboard() {
 export default function App(){
   const path = usePath()
   if(path.startsWith('/login')) return <LoginPage />
-  if(path.startsWith('/events/new')) return <Protected><EventFormPage /></Protected>
-  if(path.startsWith('/events/')) return <Protected><EventDetailPage /></Protected>
+  if(path.startsWith('/events/new')) return <Protected roles={['organizer', 'admin']}><EventFormPage /></Protected>
+  if(path.startsWith('/events/')) return <Protected roles={['organizer', 'admin']}><EventDetailPage /></Protected>
   if(path === '/checkin/start') return <CheckInStart />
   if(path.startsWith('/checkin')) return <CheckInPage />
   return <Protected><ProtectedDashboard /></Protected>

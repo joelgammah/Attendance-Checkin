@@ -18,13 +18,17 @@ vi.mock('../components/Protected', () => ({
 
 // Mock auth
 vi.mock('../api/auth', () => ({
-  getUserRole: vi.fn(() => 'organizer')
+  getUserRole: vi.fn(() => 'organizer'),
+  getActiveRole: vi.fn(() => 'organizer'),
+  getUserRoles: vi.fn(() => ['organizer', 'attendee'])
 }))
 
+
 import App from '../App'
-import { getUserRole } from '../api/auth'
+import { getUserRole, getActiveRole } from '../api/auth'
 
 const mockGetUserRole = getUserRole as any
+const mockGetActiveRole = getActiveRole as any
 
 describe('App Routing', () => {
   beforeEach(() => {
@@ -84,22 +88,22 @@ describe('App Routing', () => {
 
   it('shows organizer dashboard by default for organizer role', () => {
     mockGetUserRole.mockReturnValue('organizer')
+    mockGetActiveRole.mockReturnValue('organizer')
     Object.defineProperty(window, 'location', {
       value: { pathname: '/', search: '' },
       writable: true
     })
-    
     render(<App />)
     expect(screen.getByText('Dashboard Page')).toBeInTheDocument()
   })
 
   it('shows attendee dashboard for attendee role', () => {
     mockGetUserRole.mockReturnValue('attendee')
+    mockGetActiveRole.mockReturnValue('attendee')
     Object.defineProperty(window, 'location', {
       value: { pathname: '/', search: '' },
       writable: true
     })
-    
     render(<App />)
     expect(screen.getByText('Attendee Dashboard')).toBeInTheDocument()
   })
