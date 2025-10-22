@@ -13,11 +13,13 @@ vi.mock('../router', () => ({
 vi.mock('../api/auth', () => ({
   logout: vi.fn(),
   isAuthenticated: vi.fn(() => true),
-  getUserRole: vi.fn(() => 'organizer')
+  getUserRole: vi.fn(() => 'organizer'),
+  getActiveRole: vi.fn(() => 'organizer'),
+  getUserRoles: vi.fn(() => ['organizer', 'attendee'])
 }))
 
 // Now import Nav after mocking its dependencies
-import { logout } from '../api/auth'
+import { getActiveRole, logout } from '../api/auth'
 import Nav from '../components/Nav'
 
 const mockLogout = logout as any

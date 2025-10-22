@@ -15,6 +15,7 @@ def get_url():
 
 from app.models.base import Base  # noqa: E402
 from app.models.user import User  # noqa: F401
+from app.models.user_role import UserRoleAssignment  # noqa: F401
 from app.models.organization import Organization  # noqa: F401
 from app.models.event import Event  # noqa: F401
 from app.models.attendance import Attendance  # noqa: F401

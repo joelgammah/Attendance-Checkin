@@ -24,6 +24,9 @@ vi.mock('../components/Protected', () => ({
 vi.mock('../api/auth', () => ({
   isAuthenticated: () => true,
   getUserRole: () => 'organizer',
+  getUserRoles: () => ['organizer'],
+  getActiveRole: () => 'organizer',
+  setActiveRole: vi.fn(),
   logout: vi.fn()
 }))
 
