@@ -64,6 +64,7 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 - Attendee: `gammahja@wofford.edu`
 - Attendee: `martincs@wofford.edu`
 - Attendee: `podrebarackc@wofford.edu`
+- Organizer & Attendee: `garrettal@wofford.edu` (you will have to insert this user manually into the user and user_roles tables in the DB)
 
 ## Tests & Coverage
 

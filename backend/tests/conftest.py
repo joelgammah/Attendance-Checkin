@@ -6,6 +6,7 @@ from app.main import app
 from app.api.deps import get_db
 from app.models.base import Base
 from app.models.user import User, UserRole
+from app.models.user_role import UserRoleAssignment
 from app.core.security import get_password_hash
 
 # Simple test database
@@ -37,6 +38,7 @@ def setup_test_db():
         ("martincs@wofford.edu", "Collin Martin", UserRole.ATTENDEE),
         ("podrebarackc@wofford.edu", "Kate Podrebarac", UserRole.ATTENDEE),
         ("gammahja@wofford.edu", "Joel Gammah", UserRole.ATTENDEE),
+        ("garrettal@wofford.edu", "Aaron Garrett", UserRole.ORGANIZER),
     ]
     
     for email, name, role in demo_users:
@@ -47,6 +49,17 @@ def setup_test_db():
             password_hash=get_password_hash(email.split("@")[0])
         )
         db.add(user)
+    db.commit()
+    
+    # Backfill role assignments for test users
+    users = db.query(User).all()
+    for u in users:
+        # Add role assignment for legacy role
+        db.add(UserRoleAssignment(user_id=u.id, role=u.role.value))
+        # Aaron Garrett gets both organizer and attendee
+        if u.email == "garrettal@wofford.edu":
+            db.add(UserRoleAssignment(user_id=u.id, role=UserRole.ATTENDEE.value))
+    
     db.commit()
     db.close()
     

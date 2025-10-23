@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 import secrets
 import re
 
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, require_any_role
 from app.models.user import UserRole, User
 from app.repositories.event_repo import EventRepository
 from app.repositories.attendance_repo import AttendanceRepository
@@ -79,24 +79,26 @@ def get_dates_between(start_date: date, end_date: date, weekdays: List[str]) -> 
 
 
 @router.post("/", response_model=EventOut)
-def create_event(payload: EventCreate, db: Session = Depends(get_db), user = Depends(get_current_user)):
-    if user.role not in (UserRole.ORGANIZER, UserRole.ADMIN):
-        raise HTTPException(403, "Only organizers can create events")
+def create_event(
+    payload: EventCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_any_role(UserRole.ORGANIZER, UserRole.ADMIN)),
+):
     
     try:
         # Parse naive datetime from frontend
         start_naive = datetime.fromisoformat(payload.start_time)
         end_naive = datetime.fromisoformat(payload.end_time)
-        
+
         # Apply user's timezone (from frontend)
         user_timezone = ZoneInfo(payload.timezone)  # "America/New_York"
         start_local = start_naive.replace(tzinfo=user_timezone)
         end_local = end_naive.replace(tzinfo=user_timezone)
-        
+
         # Convert to UTC for storage
         start_utc = start_local.astimezone(timezone.utc)
         end_utc = end_local.astimezone(timezone.utc)
-        
+
         # Validation
         if start_utc >= end_utc:
             raise HTTPException(400, "Start time must be before end time")
@@ -179,9 +181,11 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db), user = Dep
             end_date=parent_event.end_date.isoformat() + "Z" if parent_event.end_date else None,
             parent_id=parent_event.parent_id
         )
-        
+
     except ValueError as e:
         raise HTTPException(400, f"Invalid datetime format: {str(e)}")
+    except HTTPException as e:
+        raise
     except Exception as e:
         raise HTTPException(500, f"Error creating event: {str(e)}")
 
@@ -244,6 +248,17 @@ class MyCheckInOut(BaseModel):
         from_attributes = True
 
 
+class AttendeeOut(BaseModel):
+    id: int
+    attendee_id: int
+    attendee_name: str
+    attendee_email: str
+    checked_in_at: str  # Changed from datetime to str for explicit UTC format
+
+    class Config:
+        from_attributes = True
+
+
 @router.get("/my-checkins", response_model=List[MyCheckInOut])
 def my_checkins(db: Session = Depends(get_db), user = Depends(get_current_user)):
     """Get current user's check-in history"""
@@ -261,7 +276,11 @@ def my_checkins(db: Session = Depends(get_db), user = Depends(get_current_user))
 
 
 @router.post("/checkin", response_model=AttendanceOut)
-def check_in(req: CheckInRequest, db: Session = Depends(get_db), user = Depends(get_current_user)):
+def check_in(
+    req: CheckInRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_any_role(UserRole.ATTENDEE, UserRole.ORGANIZER, UserRole.ADMIN)),
+):
     event = event_repo.get_by_token(db, req.event_token)
     if not event:
         raise HTTPException(404, "Event not found")
@@ -292,11 +311,17 @@ def check_in(req: CheckInRequest, db: Session = Depends(get_db), user = Depends(
 
 
 @router.get("/{event_id}/attendance.csv")
-def export_csv(event_id: int, db: Session = Depends(get_db), user = Depends(get_current_user)):
+def export_csv(event_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     event = event_repo.get(db, event_id)
     if not event:
         raise HTTPException(404, "Event not found")
-    if user.role not in (UserRole.ORGANIZER, UserRole.ADMIN) or event.organizer_id != user.id:
+    
+    # Allow admins or event organizer to export
+    user_roles = user.roles()
+    is_admin = UserRole.ADMIN in user_roles
+    is_event_organizer = event.organizer_id == user.id
+    
+    if not (is_admin or is_event_organizer):
         raise HTTPException(403, "Forbidden")
 
     # EXCLUDE organizer (do not list the event creator in the CSV)
@@ -304,8 +329,7 @@ def export_csv(event_id: int, db: Session = Depends(get_db), user = Depends(get_
         db.query(Attendance, User)
         .join(User, Attendance.attendee_id == User.id)
         .filter(
-            Attendance.event_id == event_id,
-            Attendance.attendee_id != event.organizer_id  # <-- exclude organizer
+            Attendance.event_id == event_id
         )
         .order_by(Attendance.checked_in_at.asc())
         .all()
@@ -374,3 +398,38 @@ def get_by_token(token: str, db: Session = Depends(get_db), user = Depends(get_c
         checkin_token=e.checkin_token,
         attendance_count=count
     )
+
+
+@router.get("/{event_id}/attendees", response_model=List[AttendeeOut])
+def get_event_attendees(event_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get all attendees for a specific event"""
+    event = event_repo.get(db, event_id)
+    if not event:
+        raise HTTPException(404, "Event not found")
+    
+    # Allow admins or event organizer to view attendees
+    user_roles = user.roles()
+    is_admin = UserRole.ADMIN in user_roles
+    is_event_organizer = event.organizer_id == user.id
+    
+    if not (is_admin or is_event_organizer):
+        raise HTTPException(403, "Forbidden")
+
+    # Get attendance records with user information
+    records = (
+        db.query(Attendance, User)
+        .join(User, Attendance.attendee_id == User.id)
+        .filter(Attendance.event_id == event_id)
+        .order_by(Attendance.checked_in_at.asc())
+        .all()
+    )
+
+    return [
+        AttendeeOut(
+            id=att.id,
+            attendee_id=att.attendee_id,
+            attendee_name=usr.name,
+            attendee_email=usr.email,
+            checked_in_at=att.checked_in_at.isoformat() + "Z"
+        ) for att, usr in records
+    ]

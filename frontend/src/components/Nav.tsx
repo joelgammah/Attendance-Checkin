@@ -1,7 +1,11 @@
-import { logout } from '../api/auth'
+import { logout, getUserRole } from '../api/auth'
 import { Link } from './Protected'
+import RoleSwitch from './RoleSwitch'
 
 export default function Nav(){
+  const role = getUserRole()
+  const canCreateEvents = role === 'organizer' || role === 'admin'
+
   return (
     <nav className="w-full flex items-center justify-between p-6 bg-white border-b border-gray-200 shadow-sm">
       {/* Brand/Logo */}
@@ -18,6 +22,10 @@ export default function Nav(){
 
       {/* Navigation Links */}
       <div className="flex items-center space-x-1">
+        {/* Role Switcher */}
+        <div className="mr-4">
+          <RoleSwitch />
+        </div>
         <Link 
           to="/" 
           className="px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:text-gray-900 transition-colors duration-200"
@@ -39,25 +47,27 @@ export default function Nav(){
           </div>
         </Link>
 
-        <Link 
-          to="/events/new" 
-          className="px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:text-gray-900 transition-colors duration-200"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.1)';
-            e.currentTarget.style.color = '#95866A';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = '#374151';
-          }}
-        >
-          <div className="flex items-center space-x-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            <span>Create Event</span>
-          </div>
-        </Link>
+        {canCreateEvents && (
+          <Link 
+            to="/events/new" 
+            className="px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:text-gray-900 transition-colors duration-200"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.1)';
+              e.currentTarget.style.color = '#95866A';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#374151';
+            }}
+          >
+            <div className="flex items-center space-x-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              <span>Create Event</span>
+            </div>
+          </Link>
+        )}
 
         {/* Divider */}
         <div className="h-6 w-px bg-gray-300 mx-2"></div>

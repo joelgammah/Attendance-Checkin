@@ -9,6 +9,8 @@ export default function DashboardPage(){
   const [loading, setLoading] = React.useState(true)
   const [showNotification, setShowNotification] = React.useState(false)
   const [notificationMessage, setNotificationMessage] = React.useState('')
+  const [expandedUpcoming, setExpandedUpcoming] = React.useState(false)
+  const [expandedPast, setExpandedPast] = React.useState(false)
 
   // Show notification and auto-hide after 5 seconds
   const showSuccessNotification = (message: string) => {
@@ -47,6 +49,9 @@ export default function DashboardPage(){
     }
   }, [showSuccessNotification])
 
+  const upcomingToDisplay = expandedUpcoming ? upcoming : upcoming.slice(0, 5)
+  const pastToDisplay = expandedPast ? past : past.slice(0, 5)
+
   if (loading) {
     return (
       <div>
@@ -70,7 +75,7 @@ export default function DashboardPage(){
       
       {/* Header Section */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center space-x-4">
             <div className="flex items-center justify-center w-16 h-16 rounded-xl" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)'}}>
               <svg className="w-8 h-8" style={{color: '#95866A'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,7 +93,7 @@ export default function DashboardPage(){
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid gap-8">
           
           {/* Upcoming Events Section */}
@@ -102,11 +107,22 @@ export default function DashboardPage(){
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">Upcoming Events</h2>
               </div>
-              <span className="px-3 py-1 text-sm font-medium rounded-full" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}>
-                {upcoming.length} events
-              </span>
+              <div className="flex items-center space-x-3">
+                <span className="px-3 py-1 text-sm font-medium rounded-full" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}>
+                  {upcoming.length} events
+                </span>
+                {upcoming.length > 5 && (
+                  <button
+                    onClick={() => setExpandedUpcoming(!expandedUpcoming)}
+                    className="px-3 py-1 text-sm font-medium rounded-full transition-all duration-200 hover:opacity-80"
+                    style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}
+                  >
+                    {expandedUpcoming ? 'View Less' : 'View More'}
+                  </button>
+                )}
+              </div>
             </div>
-            <EventList items={upcoming} />
+            <EventList items={upcomingToDisplay} />
           </section>
 
           {/* Past Events Section */}
@@ -120,11 +136,22 @@ export default function DashboardPage(){
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">Past Events</h2>
               </div>
-              <span className="px-3 py-1 text-sm font-medium rounded-full" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}>
-                {past.length} events
-              </span>
+              <div className="flex items-center space-x-3">
+                <span className="px-3 py-1 text-sm font-medium rounded-full" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}>
+                  {past.length} events
+                </span>
+                {past.length > 5 && (
+                  <button
+                    onClick={() => setExpandedPast(!expandedPast)}
+                    className="px-3 py-1 text-sm font-medium rounded-full transition-all duration-200 hover:opacity-80"
+                    style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}
+                  >
+                    {expandedPast ? 'View Less' : 'View More'}
+                  </button>
+                )}
+              </div>
             </div>
-            <EventList items={past} showCsv onCsv={handleCsvClick} />  {/* ADD pass handler */}
+            <EventList items={pastToDisplay} showCsv onCsv={handleCsvClick} />
           </section>
         </div>
       </div>
@@ -204,9 +231,19 @@ function EventList(
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-lg font-semibold text-gray-900 pr-4">{e.name}</h3>
                 <div className="flex items-center space-x-2 text-sm">
-                  <span className="px-2 py-1 rounded-full text-xs font-medium" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}>
+                  <button
+                    onClick={() => window.open(`/events/${e.id}/attendees`, '_blank')}
+                    className="px-2 py-1 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 hover:shadow-sm"
+                    style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.1)';
+                    }}
+                  >
                     {e.attendance_count} attendees
-                  </span>
+                  </button>
                 </div>
               </div>
               
