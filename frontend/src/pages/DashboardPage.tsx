@@ -231,9 +231,19 @@ function EventList(
               <div className="flex items-start justify-between mb-3">
                 <h3 className="text-lg font-semibold text-gray-900 pr-4">{e.name}</h3>
                 <div className="flex items-center space-x-2 text-sm">
-                  <span className="px-2 py-1 rounded-full text-xs font-medium" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}>
+                  <button
+                    onClick={() => window.open(`/events/${e.id}/attendees`, '_blank')}
+                    className="px-2 py-1 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 hover:shadow-sm"
+                    style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.1)';
+                    }}
+                  >
                     {e.attendance_count} attendees
-                  </span>
+                  </button>
                 </div>
               </div>
               
