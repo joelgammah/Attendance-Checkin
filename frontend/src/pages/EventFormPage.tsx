@@ -3,11 +3,11 @@ import Nav from '../components/Nav'
 import { createEvent } from '../api/events'
 
 export default function EventFormPage(){
-  const [form, setForm] = React.useState({ name: '', location: '', start_time: '', end_time: '', notes: '' })
+  const [form, setForm] = React.useState({ name: '', location: '', start_time: '', end_time: '', notes: '', recurring: false, weekdays: [] as string[], end_date: '' })
   const [error, setError] = React.useState('')
   const [loading, setLoading] = React.useState(false)
 
-  function update<K extends keyof typeof form>(k: K, v: string){ setForm(s=>({ ...s, [k]: v })) }
+  function update<K extends keyof typeof form>(k: K, v: typeof form[K]){ setForm(s=>({ ...s, [k]: v })) }
 
   async function onSubmit(e: React.FormEvent){
     e.preventDefault()
@@ -182,6 +182,72 @@ export default function EventFormPage(){
                   required
                 />
               </div>
+              </div>
+              {/*checkbox for recurring events that if checked, adds fields for selecting weekdays and an end date*/}
+              <div className="space-y-2">
+                <label htmlFor="recurring" className="flex items-center">
+                  <input
+                    id="recurring"
+                    type="checkbox"
+                    checked={form.recurring}
+                    onChange={e => update('recurring', e.target.checked)}
+                    className="mr-2"
+                  />
+                  Recurring Event
+                </label>
+                {form.recurring && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Weekdays */}
+                  <div className="space-y-2">
+                    <label htmlFor="weekdays" className="block text-sm font-medium text-gray-700">
+                    Select Weekdays *
+                    </label>
+                    <div className="flex flex-wrap">
+                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                      <label key={day} className="flex items-center mr-4">
+                      <input
+                        type="checkbox"
+                        checked={form.weekdays.includes(day)}
+                        onChange={e => {
+                        const newWeekdays = e.target.checked
+                          ? [...form.weekdays, day]
+                          : form.weekdays.filter(d => d !== day);
+                        update('weekdays', newWeekdays);
+                        }}
+                        className="mr-2"
+                        required={form.recurring && form.weekdays.length == 0}
+                      />
+                      {day}
+                      </label>
+                    ))}
+                    </div>
+                  </div>
+
+
+                  {/* End Date */}
+                  <div className="space-y-2">
+                    <label htmlFor="end_date" className="block text-sm font-medium text-gray-700">
+                      End Date *
+                    </label>
+                    <input
+                      id="end_date"
+                      type="date"
+                      value={form.end_date}
+                      onChange={e => update('end_date', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent transition-colors duration-200"
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#95866A';
+                        e.target.style.boxShadow = `0 0 0 2px rgba(149, 134, 106, 0.2)`;
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#d1d5db';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Notes */}
