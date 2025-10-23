@@ -9,6 +9,8 @@ export default function DashboardPage(){
   const [loading, setLoading] = React.useState(true)
   const [showNotification, setShowNotification] = React.useState(false)
   const [notificationMessage, setNotificationMessage] = React.useState('')
+  const [expandedUpcoming, setExpandedUpcoming] = React.useState(false)
+  const [expandedPast, setExpandedPast] = React.useState(false)
 
   // Show notification and auto-hide after 5 seconds
   const showSuccessNotification = (message: string) => {
@@ -46,6 +48,9 @@ export default function DashboardPage(){
       showSuccessNotification('Failed to export CSV. Please try again.')
     }
   }, [showSuccessNotification])
+
+  const upcomingToDisplay = expandedUpcoming ? upcoming : upcoming.slice(0, 5)
+  const pastToDisplay = expandedPast ? past : past.slice(0, 5)
 
   if (loading) {
     return (
@@ -102,11 +107,22 @@ export default function DashboardPage(){
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">Upcoming Events</h2>
               </div>
-              <span className="px-3 py-1 text-sm font-medium rounded-full" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}>
-                {upcoming.length} events
-              </span>
+              <div className="flex items-center space-x-3">
+                <span className="px-3 py-1 text-sm font-medium rounded-full" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}>
+                  {upcoming.length} events
+                </span>
+                {upcoming.length > 5 && (
+                  <button
+                    onClick={() => setExpandedUpcoming(!expandedUpcoming)}
+                    className="px-3 py-1 text-sm font-medium rounded-full transition-all duration-200 hover:opacity-80"
+                    style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}
+                  >
+                    {expandedUpcoming ? 'View Less' : 'View More'}
+                  </button>
+                )}
+              </div>
             </div>
-            <EventList items={upcoming} />
+            <EventList items={upcomingToDisplay} />
           </section>
 
           {/* Past Events Section */}
@@ -120,11 +136,22 @@ export default function DashboardPage(){
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">Past Events</h2>
               </div>
-              <span className="px-3 py-1 text-sm font-medium rounded-full" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}>
-                {past.length} events
-              </span>
+              <div className="flex items-center space-x-3">
+                <span className="px-3 py-1 text-sm font-medium rounded-full" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}>
+                  {past.length} events
+                </span>
+                {past.length > 5 && (
+                  <button
+                    onClick={() => setExpandedPast(!expandedPast)}
+                    className="px-3 py-1 text-sm font-medium rounded-full transition-all duration-200 hover:opacity-80"
+                    style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}
+                  >
+                    {expandedPast ? 'View Less' : 'View More'}
+                  </button>
+                )}
+              </div>
             </div>
-            <EventList items={past} showCsv onCsv={handleCsvClick} />  {/* ADD pass handler */}
+            <EventList items={pastToDisplay} showCsv onCsv={handleCsvClick} />
           </section>
         </div>
       </div>
