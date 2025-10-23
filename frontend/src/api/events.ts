@@ -37,3 +37,15 @@ export async function downloadAttendanceCsv(eventId: number, eventName?: string)
   a.remove()
   URL.revokeObjectURL(dlUrl)
 }
+
+export interface AttendeeOut {
+  id: number
+  attendee_id: number
+  attendee_name: string
+  attendee_email: string
+  checked_in_at: string
+}
+
+export async function getEventAttendees(eventId: number): Promise<AttendeeOut[]> {
+  return fetchJson<AttendeeOut[]>(`/v1/events/${eventId}/attendees`)
+}

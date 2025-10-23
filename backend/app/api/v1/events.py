@@ -164,6 +164,17 @@ class MyCheckInOut(BaseModel):
         from_attributes = True
 
 
+class AttendeeOut(BaseModel):
+    id: int
+    attendee_id: int
+    attendee_name: str
+    attendee_email: str
+    checked_in_at: str  # Changed from datetime to str for explicit UTC format
+
+    class Config:
+        from_attributes = True
+
+
 @router.get("/my-checkins", response_model=List[MyCheckInOut])
 def my_checkins(db: Session = Depends(get_db), user = Depends(get_current_user)):
     """Get current user's check-in history"""
@@ -303,3 +314,38 @@ def get_by_token(token: str, db: Session = Depends(get_db), user = Depends(get_c
         checkin_token=e.checkin_token,
         attendance_count=count
     )
+
+
+@router.get("/{event_id}/attendees", response_model=List[AttendeeOut])
+def get_event_attendees(event_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get all attendees for a specific event"""
+    event = event_repo.get(db, event_id)
+    if not event:
+        raise HTTPException(404, "Event not found")
+    
+    # Allow admins or event organizer to view attendees
+    user_roles = user.roles()
+    is_admin = UserRole.ADMIN in user_roles
+    is_event_organizer = event.organizer_id == user.id
+    
+    if not (is_admin or is_event_organizer):
+        raise HTTPException(403, "Forbidden")
+
+    # Get attendance records with user information
+    records = (
+        db.query(Attendance, User)
+        .join(User, Attendance.attendee_id == User.id)
+        .filter(Attendance.event_id == event_id)
+        .order_by(Attendance.checked_in_at.asc())
+        .all()
+    )
+
+    return [
+        AttendeeOut(
+            id=att.id,
+            attendee_id=att.attendee_id,
+            attendee_name=usr.name,
+            attendee_email=usr.email,
+            checked_in_at=att.checked_in_at.isoformat() + "Z"
+        ) for att, usr in records
+    ]
