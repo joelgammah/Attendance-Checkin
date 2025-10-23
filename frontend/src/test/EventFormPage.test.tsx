@@ -120,7 +120,10 @@ describe('EventFormPage', () => {
         start_time: '2024-12-01T10:00',
         end_time: '2024-12-01T12:00',
         notes: 'Test notes',
-        timezone: 'America/New_York'
+        timezone: 'America/New_York',
+        end_date: '',
+        recurring: false,
+        weekdays: []
       })
     })
     
@@ -203,7 +206,10 @@ describe('EventFormPage', () => {
         start_time: '2024-12-01T10:00',
         end_time: '2024-12-01T12:00',
         notes: '',
-        timezone: 'America/New_York'
+        timezone: 'America/New_York',
+        end_date: '',
+        recurring: false,
+        weekdays: []
       })
     })
   })

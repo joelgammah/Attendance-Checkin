@@ -44,6 +44,34 @@ def test_create_event_invalid_format(client, token_organizer):
     assert r.status_code == 400
     assert "Invalid datetime format" in r.text
 
+def test_create_recurring_event_missing_fields(client, token_organizer):
+    headers = {"Authorization": f"Bearer {token_organizer}"}
+    # Missing weekdays
+    payload = {
+        "name": "Recurring Event",
+        "location": "Test City",
+        "start_time": datetime.now(timezone.utc).isoformat(),
+        "end_time": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+        "recurring": True,
+        "end_date": (datetime.now(timezone.utc) + timedelta(days=7)).strftime("%Y-%m-%d"),
+        "timezone": "America/New_York"
+    }
+    r = client.post("/api/v1/events/", json=payload, headers=headers)
+    assert r.status_code == 200  # Should still create parent event, but not children
+
+    # Missing end_date
+    payload = {
+        "name": "Recurring Event",
+        "location": "Test City",
+        "start_time": datetime.now(timezone.utc).isoformat(),
+        "end_time": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+        "recurring": True,
+        "weekdays": ["Mon", "Wed"],
+        "timezone": "America/New_York"
+    }
+    r = client.post("/api/v1/events/", json=payload, headers=headers)
+    assert r.status_code == 200
+
 def test_my_past(client, token_organizer):
     headers = {"Authorization": f"Bearer {token_organizer}"}
     r = client.get("/api/v1/events/mine/past", headers=headers)
@@ -55,6 +83,28 @@ def test_my_checkins(client, token_student):
     r = client.get("/api/v1/events/my-checkins", headers=headers)
     assert r.status_code == 200
     assert isinstance(r.json(), list)
+
+def test_checkin_outside_window(client, token_student, token_organizer):
+    headers = {"Authorization": f"Bearer {token_student}"}
+    # Create an event in the past
+    start = datetime.now(timezone.utc) - timedelta(hours=2)
+    end = start + timedelta(minutes=30)
+    payload = {
+        "name": "Past Event",
+        "location": "Test City",
+        "start_time": start.isoformat(),
+        "end_time": end.isoformat(),
+        "timezone": "America/New_York"
+    }
+    # Organizer creates event
+    org_headers = {"Authorization": f"Bearer {token_organizer}"}
+    r = client.post("/api/v1/events/", json=payload, headers=org_headers)
+    assert r.status_code == 200, f"Event creation failed: {r.text}"
+    eid = r.json()["id"]
+    # Try to check in as student
+    r2 = client.post("/api/v1/events/checkin", json={"event_token": r.json()["checkin_token"]}, headers=headers)
+    assert r2.status_code == 400
+    assert "Check-in not open" in r2.text
 
 def test_checkin_invalid_token(client, token_student):
     headers = {"Authorization": f"Bearer {token_student}"}

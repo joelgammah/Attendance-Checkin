@@ -6,24 +6,26 @@ import RoleSwitch from '../components/RoleSwitch'
 
 export default function AttendeeDashboard() {
   const [checkIns, setCheckIns] = React.useState<MyCheckIn[]>([])
+  const [allCheckIns, setAllCheckIns] = React.useState<MyCheckIn[] | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [userEmail, setUserEmail] = React.useState('')
+  const [showAll, setShowAll] = React.useState(false)
+  const [hasMore, setHasMore] = React.useState(false)
 
   React.useEffect(() => {
     async function loadData() {
       try {
         // Get user email from localStorage (stored during login)
         const storedEmail = localStorage.getItem('user_email')
-        
         if (storedEmail) {
           setUserEmail(storedEmail)
         } else {
           setUserEmail('Student')
         }
-
-        // Load check-ins
+        // Load check-ins (preview only)
         const data = await getMyCheckIns()
         setCheckIns(data.slice(0, 5))
+        setHasMore(data.length > 5)
       } catch (error) {
         console.error('Failed to load data:', error)
         setUserEmail('Student')
@@ -33,6 +35,23 @@ export default function AttendeeDashboard() {
     }
     loadData()
   }, [])
+
+  // Handler for toggling all check-ins
+  const handleToggleCheckIns = async () => {
+    if (!showAll && allCheckIns === null) {
+      // Fetch all check-ins only once
+      try {
+        setLoading(true)
+        const data = await getMyCheckIns()
+        setAllCheckIns(data)
+      } catch (error) {
+        setAllCheckIns([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    setShowAll((prev) => !prev)
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -219,9 +238,9 @@ export default function AttendeeDashboard() {
                   <span className="text-gray-600">Loading your check-ins...</span>
                 </div>
               </div>
-            ) : checkIns.length > 0 ? (
-              <div className="space-y-4">
-                {checkIns.map((checkIn) => (
+            ) : (showAll ? (allCheckIns || []).length > 0 : checkIns.length > 0) ? (
+              <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                {(showAll ? allCheckIns || [] : checkIns).map((checkIn) => (
                   <div key={checkIn.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors duration-200">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -259,10 +278,11 @@ export default function AttendeeDashboard() {
                     </div>
                   </div>
                 ))}
-                {checkIns.length === 5 && (
-                  <button 
+                {(!showAll && hasMore) || (showAll && (allCheckIns && allCheckIns.length > 5)) ? (
+                  <button
                     className="w-full text-center py-3 text-sm font-medium rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-200"
                     style={{color: '#95866A'}}
+                    onClick={handleToggleCheckIns}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = '#95866A';
                       e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.05)';
@@ -272,9 +292,9 @@ export default function AttendeeDashboard() {
                       e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
-                    View all check-ins →
+                    {showAll ? 'View less' : 'View all check-ins →'}
                   </button>
-                )}
+                ) : null}
               </div>
             ) : (
               <div className="text-center py-8">
@@ -283,8 +303,8 @@ export default function AttendeeDashboard() {
                 </svg>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No check-ins yet</h3>
                 <p className="text-gray-600 mb-4">Start checking into events to see your attendance history here.</p>
-                <Link 
-                  to="/checkin/start" 
+                <Link
+                  to="/checkin/start"
                   className="inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200"
                   style={{backgroundColor: '#95866A'}}
                   onMouseEnter={(e) => {
