@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from typing import List
 from sqlalchemy.orm import Session
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, date
 from zoneinfo import ZoneInfo
 import secrets
 import re
@@ -30,7 +30,11 @@ class EventCreate(BaseModel):
     notes: str | None = None
     checkin_open_minutes: int | None = None
     timezone: str = "America/New_York"  # Added timezone field
-
+    #new fields for recurring logic
+    recurring: bool = False
+    weekdays: List[str] | None = None
+    end_date: str | None = None
+    parent_id: int | None = None
 
 class EventOut(BaseModel):
     id: int
@@ -42,9 +46,36 @@ class EventOut(BaseModel):
     checkin_open_minutes: int
     checkin_token: str
     attendance_count: int = 0
+    #new fields for recurring logic
+    recurring: bool = False
+    weekdays: List[str] | None = None
+    end_date: str | None = None
+    parent_id: int | None = None
 
     class Config:
         from_attributes = True
+
+def get_dates_between(start_date: date, end_date: date, weekdays: List[str]) -> List[date]:
+    """Helper function to get all dates between start and end that match given weekdays"""
+    # Convert weekday names to numbers (Monday = 0, Sunday = 6)
+    weekday_map = {
+        'Mon': 0, 'Monday': 0,
+        'Tue': 1, 'Tuesday': 1,
+        'Wed': 2, 'Wednesday': 2,
+        'Thu': 3, 'Thursday': 3,
+        'Fri': 4, 'Friday': 4,
+        'Sat': 5, 'Saturday': 5,
+        'Sun': 6, 'Sunday': 6
+    }
+    selected_weekdays = [weekday_map[day] for day in weekdays]
+    
+    dates = []
+    current = start_date
+    while current <= end_date:
+        if current.weekday() in selected_weekdays:
+            dates.append(current)
+        current += timedelta(days=1)
+    return dates
 
 
 @router.post("/", response_model=EventOut)
@@ -71,9 +102,18 @@ def create_event(
         # Validation
         if start_utc >= end_utc:
             raise HTTPException(400, "Start time must be before end time")
-
+        
+        end_date_utc = None
+        if payload.end_date:
+            end_date_local = datetime.strptime(payload.end_date, "%Y-%m-%d").replace(
+                hour=end_naive.hour,
+                minute=end_naive.minute,
+                tzinfo=user_timezone
+            )
+            end_date_utc = end_date_local.astimezone(timezone.utc)
+            
         token = secrets.token_urlsafe(16)
-        event = event_repo.create(
+        parent_event = event_repo.create(
             db,
             name=payload.name,
             location=payload.location,
@@ -83,19 +123,63 @@ def create_event(
             checkin_open_minutes=payload.checkin_open_minutes or settings.DEFAULT_CHECKIN_OPEN_MINUTES,
             checkin_token=token,
             organizer_id=user.id,
+            recurring=payload.recurring,
+            weekdays=payload.weekdays,
+            end_date=end_date_utc,
+            #first event is the parent/ not recurring so parent_id is None
+            parent_id=None
+
         )
+        db.flush()
+
+        if payload.recurring and payload.weekdays and payload.end_date:
+            # Create recurring events
+            start_date_only = start_local.date()
+            end_date_only = end_date_utc.date()
+            recurring_dates = get_dates_between(start_date_only, end_date_only, payload.weekdays)
+            #skip first date since it's already created
+            if len(recurring_dates) > 1:
+                for rd in recurring_dates[1:]:
+                    new_start_local = datetime.combine(rd, start_local.time(), tzinfo=user_timezone)
+                    new_end_local = datetime.combine(rd, end_local.time(), tzinfo=user_timezone)
+                    new_start_utc = new_start_local.astimezone(timezone.utc)
+                    new_end_utc = new_end_local.astimezone(timezone.utc)
+
+                    print(f"Creating recurring event on {rd} (local={new_start_local}, utc={new_start_utc})")
+
+
+                    event_repo.create(
+                        db,
+                        name=payload.name,
+                        location=payload.location,
+                        start_time=new_start_utc,
+                        end_time=new_end_utc,
+                        notes=payload.notes,
+                        checkin_open_minutes=payload.checkin_open_minutes or settings.DEFAULT_CHECKIN_OPEN_MINUTES,
+                        checkin_token=secrets.token_urlsafe(16),
+                        organizer_id=user.id,
+                        recurring=True,
+                        weekdays=payload.weekdays,
+                        end_date=end_date_utc,
+                        parent_id=parent_event.id  # Link to parent event
+                    )
         db.commit()
-        db.refresh(event)
+        db.refresh(parent_event)
+        #returns parent event only for now
         return EventOut(
-            id=event.id,
-            name=event.name,
-            location=event.location,
+            id=parent_event.id,
+            name=parent_event.name,
+            location=parent_event.location,
             start_time=start_utc.isoformat() + "Z",
             end_time=end_utc.isoformat() + "Z",
-            notes=event.notes,
-            checkin_open_minutes=event.checkin_open_minutes,
-            checkin_token=event.checkin_token,
-            attendance_count=0
+            notes=parent_event.notes,
+            checkin_open_minutes=parent_event.checkin_open_minutes,
+            checkin_token=parent_event.checkin_token,
+            attendance_count=0,
+            recurring=parent_event.recurring,
+            weekdays=parent_event.weekdays,
+            end_date=parent_event.end_date.isoformat() + "Z" if parent_event.end_date else None,
+            parent_id=parent_event.parent_id
         )
 
     except ValueError as e:
@@ -118,7 +202,11 @@ def my_upcoming(db: Session = Depends(get_db), user = Depends(get_current_user))
         notes=e.notes,
         checkin_open_minutes=e.checkin_open_minutes,
         checkin_token=e.checkin_token,
-        attendance_count=att_repo.count_for_event(db, e.id)
+        attendance_count=att_repo.count_for_event(db, e.id),
+        recurring=e.recurring,
+        weekdays=e.weekdays,
+        end_date=e.end_date.isoformat() + "Z" if e.end_date else None,
+        parent_id=e.parent_id
     ) for e in items]
 
 
@@ -134,7 +222,11 @@ def my_past(db: Session = Depends(get_db), user = Depends(get_current_user)):
         notes=e.notes,
         checkin_open_minutes=e.checkin_open_minutes,
         checkin_token=e.checkin_token,
-        attendance_count=att_repo.count_for_event(db, e.id)
+        attendance_count=att_repo.count_for_event(db, e.id),
+        recurring=e.recurring,
+        weekdays=e.weekdays,
+        end_date=e.end_date.isoformat() + "Z" if e.end_date else None,
+        parent_id=e.parent_id
     ) for e in items]
 
 
@@ -312,7 +404,11 @@ def get_by_token(token: str, db: Session = Depends(get_db), user = Depends(get_c
         notes=e.notes,
         checkin_open_minutes=e.checkin_open_minutes,
         checkin_token=e.checkin_token,
-        attendance_count=count
+        attendance_count=count,
+        recurring=e.recurring,
+        weekdays=e.weekdays,
+        end_date=e.end_date.isoformat() + "Z" if e.end_date else None,
+        parent_id=e.parent_id
     )
 
 
