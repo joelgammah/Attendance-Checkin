@@ -202,7 +202,11 @@ def my_upcoming(db: Session = Depends(get_db), user = Depends(get_current_user))
         notes=e.notes,
         checkin_open_minutes=e.checkin_open_minutes,
         checkin_token=e.checkin_token,
-        attendance_count=att_repo.count_for_event(db, e.id)
+        attendance_count=att_repo.count_for_event(db, e.id),
+        recurring=e.recurring,
+        weekdays=e.weekdays,
+        end_date=e.end_date.isoformat() + "Z" if e.end_date else None,
+        parent_id=e.parent_id
     ) for e in items]
 
 
@@ -218,7 +222,11 @@ def my_past(db: Session = Depends(get_db), user = Depends(get_current_user)):
         notes=e.notes,
         checkin_open_minutes=e.checkin_open_minutes,
         checkin_token=e.checkin_token,
-        attendance_count=att_repo.count_for_event(db, e.id)
+        attendance_count=att_repo.count_for_event(db, e.id),
+        recurring=e.recurring,
+        weekdays=e.weekdays,
+        end_date=e.end_date.isoformat() + "Z" if e.end_date else None,
+        parent_id=e.parent_id
     ) for e in items]
 
 
@@ -396,7 +404,11 @@ def get_by_token(token: str, db: Session = Depends(get_db), user = Depends(get_c
         notes=e.notes,
         checkin_open_minutes=e.checkin_open_minutes,
         checkin_token=e.checkin_token,
-        attendance_count=count
+        attendance_count=count,
+        recurring=e.recurring,
+        weekdays=e.weekdays,
+        end_date=e.end_date.isoformat() + "Z" if e.end_date else None,
+        parent_id=e.parent_id
     )
 
 
