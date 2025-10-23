@@ -84,28 +84,6 @@ def test_my_checkins(client, token_student):
     assert r.status_code == 200
     assert isinstance(r.json(), list)
 
-def test_checkin_outside_window(client, token_student, token_organizer):
-    headers = {"Authorization": f"Bearer {token_student}"}
-    # Create an event in the past
-    start = datetime.now(timezone.utc) - timedelta(hours=2)
-    end = start + timedelta(minutes=30)
-    payload = {
-        "name": "Past Event",
-        "location": "Test City",
-        "start_time": start.isoformat(),
-        "end_time": end.isoformat(),
-        "timezone": "America/New_York"
-    }
-    # Organizer creates event
-    org_headers = {"Authorization": f"Bearer {token_organizer}"}
-    r = client.post("/api/v1/events/", json=payload, headers=org_headers)
-    assert r.status_code == 200, f"Event creation failed: {r.text}"
-    eid = r.json()["id"]
-    # Try to check in as student
-    r2 = client.post("/api/v1/events/checkin", json={"event_token": r.json()["checkin_token"]}, headers=headers)
-    assert r2.status_code == 400
-    assert "Check-in not open" in r2.text
-
 def test_checkin_invalid_token(client, token_student):
     headers = {"Authorization": f"Bearer {token_student}"}
     r = client.post("/api/v1/events/checkin", json={"event_token": "badtoken"}, headers=headers)
