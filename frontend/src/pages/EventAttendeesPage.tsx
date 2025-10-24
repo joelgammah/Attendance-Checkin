@@ -221,7 +221,7 @@ export default function EventAttendeesPage() {
 
       {/* Success Notification Toast */}
       {showNotification && (
-        <div className="fixed bottom-4 right-4 z-50">
+        <div className="fixed bottom-4 right-4 z-50" role="alert">
           <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 flex items-center space-x-3 max-w-sm">
             <div className="flex-shrink-0">
               <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{backgroundColor: 'rgba(34, 197, 94, 0.1)'}}>

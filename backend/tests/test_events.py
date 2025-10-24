@@ -44,6 +44,34 @@ def test_create_event_invalid_format(client, token_organizer):
     assert r.status_code == 400
     assert "Invalid datetime format" in r.text
 
+def test_create_recurring_event_missing_fields(client, token_organizer):
+    headers = {"Authorization": f"Bearer {token_organizer}"}
+    # Missing weekdays
+    payload = {
+        "name": "Recurring Event",
+        "location": "Test City",
+        "start_time": datetime.now(timezone.utc).isoformat(),
+        "end_time": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+        "recurring": True,
+        "end_date": (datetime.now(timezone.utc) + timedelta(days=7)).strftime("%Y-%m-%d"),
+        "timezone": "America/New_York"
+    }
+    r = client.post("/api/v1/events/", json=payload, headers=headers)
+    assert r.status_code == 200  # Should still create parent event, but not children
+
+    # Missing end_date
+    payload = {
+        "name": "Recurring Event",
+        "location": "Test City",
+        "start_time": datetime.now(timezone.utc).isoformat(),
+        "end_time": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+        "recurring": True,
+        "weekdays": ["Mon", "Wed"],
+        "timezone": "America/New_York"
+    }
+    r = client.post("/api/v1/events/", json=payload, headers=headers)
+    assert r.status_code == 200
+
 def test_my_past(client, token_organizer):
     headers = {"Authorization": f"Bearer {token_organizer}"}
     r = client.get("/api/v1/events/mine/past", headers=headers)

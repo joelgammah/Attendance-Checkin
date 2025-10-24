@@ -229,12 +229,22 @@ function EventList(
             {/* Event Info */}
             <div className="flex-1">
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-lg font-semibold text-gray-900 pr-4">{e.name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 pr-4 flex items-center gap-2">
+                  {e.name}
+                  {e.recurring && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold" style={{backgroundColor: 'rgba(34,197,94,0.12)', color: '#059669', marginLeft: 4}}>
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Recurring
+                    </span>
+                  )}
+                </h3>
                 <div className="flex items-center space-x-2 text-sm">
                   <button
                     onClick={() => window.open(`/events/${e.id}/attendees`, '_blank')}
                     className="px-2 py-1 rounded-full text-xs font-medium cursor-pointer transition-all duration-200 hover:shadow-sm"
-                    style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}
+                    style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}} 
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.2)';
                     }}
