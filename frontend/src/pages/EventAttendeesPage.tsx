@@ -138,10 +138,10 @@ export default function EventAttendeesPage() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">
-                  Event Attendees
+                  {eventName ? `${eventName} - ` : ''}Attendees
                 </h1>
                 <p className="mt-2 text-gray-600">
-                  {attendees.length} {attendees.length === 1 ? 'person has' : 'people have'} checked in{eventName ? ` - ${eventName}` : ''}
+                  {attendees.length} {attendees.length === 1 ? 'person has' : 'people have'} checked in
                 </p>
               </div>
             </div>
