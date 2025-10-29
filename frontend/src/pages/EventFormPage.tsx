@@ -185,39 +185,47 @@ export default function EventFormPage(){
               </div>
               {/*checkbox for recurring events that if checked, adds fields for selecting weekdays and an end date*/}
               <div className="space-y-2">
-                <label htmlFor="recurring" className="flex items-center">
+                <div className="flex items-center">
                   <input
                     id="recurring"
                     type="checkbox"
                     checked={form.recurring}
                     onChange={e => update('recurring', e.target.checked)}
-                    className="mr-2"
+                    className="mr-2 cursor-pointer"
                   />
-                  Recurring Event
-                </label>
-                {form.recurring && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <span className="text-gray-700">Recurring Event</span>
+                </div>
+                <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${!form.recurring ? 'opacity-50' : ''}`}>
                   {/* Weekdays */}
                   <div className="space-y-2">
                     <label htmlFor="weekdays" className="block text-sm font-medium text-gray-700">
                     Select Weekdays *
                     </label>
-                    <div className="flex flex-wrap">
-                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                      <label key={day} className="flex items-center mr-4">
+                    <div className="flex gap-3">
+                    {[
+                      { value: 'Sun', label: 'S' },
+                      { value: 'Mon', label: 'M' },
+                      { value: 'Tue', label: 'T' },
+                      { value: 'Wed', label: 'W' },
+                      { value: 'Thu', label: 'T' },
+                      { value: 'Fri', label: 'F' },
+                      { value: 'Sat', label: 'S' }
+                    ].map(({ value, label }) => (
+                      <label key={value} className={`flex items-center ${!form.recurring ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                       <input
                         type="checkbox"
-                        checked={form.weekdays.includes(day)}
+                        checked={form.weekdays.includes(value)}
                         onChange={e => {
                         const newWeekdays = e.target.checked
-                          ? [...form.weekdays, day]
-                          : form.weekdays.filter(d => d !== day);
+                          ? [...form.weekdays, value]
+                          : form.weekdays.filter(d => d !== value);
                         update('weekdays', newWeekdays);
                         }}
-                        className="mr-2"
+                        className="mr-1"
                         required={form.recurring && form.weekdays.length == 0}
+                        disabled={!form.recurring}
                       />
-                      {day}
+                      {label}
                       </label>
                     ))}
                     </div>
@@ -227,15 +235,16 @@ export default function EventFormPage(){
                   {/* End Date */}
                   <div className="space-y-2">
                     <label htmlFor="end_date" className="block text-sm font-medium text-gray-700">
-                      End Date *
+                     Recurring Until *
                     </label>
                     <input
                       id="end_date"
                       type="date"
                       value={form.end_date}
                       onChange={e => update('end_date', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent transition-colors duration-200"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent transition-colors duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       onFocus={(e) => {
+                        if (!form.recurring) return;
                         e.target.style.borderColor = '#95866A';
                         e.target.style.boxShadow = `0 0 0 2px rgba(149, 134, 106, 0.2)`;
                       }}
@@ -243,12 +252,12 @@ export default function EventFormPage(){
                         e.target.style.borderColor = '#d1d5db';
                         e.target.style.boxShadow = 'none';
                       }}
-                      required
+                      required={form.recurring}
+                      disabled={!form.recurring}
                     />
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
 
             {/* Notes */}
             <div className="space-y-2">
