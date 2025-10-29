@@ -46,6 +46,10 @@ export interface AttendeeOut {
   checked_in_at: string
 }
 
+export async function getEvent(eventId: number): Promise<EventOut> {
+  return fetchJson<EventOut>(`/v1/events/${eventId}`)
+}
+
 export async function getEventAttendees(eventId: number): Promise<AttendeeOut[]> {
   return fetchJson<AttendeeOut[]>(`/v1/events/${eventId}/attendees`)
 }

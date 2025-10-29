@@ -412,6 +412,39 @@ def get_by_token(token: str, db: Session = Depends(get_db), user = Depends(get_c
     )
 
 
+@router.get("/{event_id}", response_model=EventOut)
+def get_event_by_id(event_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get event details by ID"""
+    event = event_repo.get(db, event_id)
+    if not event:
+        raise HTTPException(404, "Event not found")
+    
+    # Allow admins or event organizer to view event
+    user_roles = user.roles()
+    is_admin = UserRole.ADMIN in user_roles
+    is_event_organizer = event.organizer_id == user.id
+    
+    if not (is_admin or is_event_organizer):
+        raise HTTPException(403, "Forbidden")
+    
+    count = att_repo.count_for_event(db, event.id)
+    return EventOut(
+        id=event.id,
+        name=event.name,
+        location=event.location,
+        start_time=event.start_time.isoformat() + "Z",
+        end_time=event.end_time.isoformat() + "Z",
+        notes=event.notes,
+        checkin_open_minutes=event.checkin_open_minutes,
+        checkin_token=event.checkin_token,
+        attendance_count=count,
+        recurring=event.recurring,
+        weekdays=event.weekdays,
+        end_date=event.end_date.isoformat() + "Z" if event.end_date else None,
+        parent_id=event.parent_id
+    )
+
+
 @router.get("/{event_id}/attendees", response_model=List[AttendeeOut])
 def get_event_attendees(event_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """Get all attendees for a specific event"""

@@ -1,7 +1,7 @@
 import React from 'react'
 import { useParams } from '../App'
 import Nav from '../components/Nav'
-import { getEventAttendees, downloadAttendanceCsv } from '../api/events'
+import { getEvent, getEventAttendees, downloadAttendanceCsv } from '../api/events'
 import type { AttendeeOut } from '../api/events'
 
 export default function EventAttendeesPage() {
@@ -29,26 +29,25 @@ export default function EventAttendeesPage() {
       return
     }
 
-    const fetchAttendees = async () => {
+    const fetchData = async () => {
       try {
-        const data = await getEventAttendees(parseInt(eventId))
-        setAttendees(data)
+        // Fetch event details and attendees in parallel
+        const [eventData, attendeesData] = await Promise.all([
+          getEvent(parseInt(eventId)),
+          getEventAttendees(parseInt(eventId))
+        ])
         
-        // Extract event name from the first attendee's data if available
-        if (data.length > 0) {
-          // We'll need to get event name from somewhere else since it's not in the attendee data
-          // For now, we'll use a placeholder
-          setEventName(`Event ${eventId}`)
-        }
+        setEventName(eventData.name)
+        setAttendees(attendeesData)
       } catch (err) {
-        console.error('Failed to load attendees:', err)
-        setError('Failed to load attendees. Please try again.')
+        console.error('Failed to load data:', err)
+        setError('Failed to load event data. Please try again.')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchAttendees()
+    fetchData()
   }, [eventId])
 
   const handleExportCsv = async () => {
@@ -142,7 +141,7 @@ export default function EventAttendeesPage() {
                   Event Attendees
                 </h1>
                 <p className="mt-2 text-gray-600">
-                  {attendees.length} {attendees.length === 1 ? 'person has' : 'people have'} checked in
+                  {attendees.length} {attendees.length === 1 ? 'person has' : 'people have'} checked in{eventName ? ` - ${eventName}` : ''}
                 </p>
               </div>
             </div>
