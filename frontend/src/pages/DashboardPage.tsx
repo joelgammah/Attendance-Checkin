@@ -117,7 +117,7 @@ export default function DashboardPage(){
                     className="px-3 py-1 text-sm font-medium rounded-full transition-all duration-200 hover:opacity-80"
                     style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}
                   >
-                    {expandedUpcoming ? 'View Less' : 'View More'}
+                    {expandedUpcoming ? 'View Less' : 'View All'}
                   </button>
                 )}
               </div>
@@ -146,7 +146,7 @@ export default function DashboardPage(){
                     className="px-3 py-1 text-sm font-medium rounded-full transition-all duration-200 hover:opacity-80"
                     style={{backgroundColor: 'rgba(149, 134, 106, 0.1)', color: '#95866A'}}
                   >
-                    {expandedPast ? 'View Less' : 'View More'}
+                    {expandedPast ? 'View Less' : 'View All'}
                   </button>
                 )}
               </div>
