@@ -4,13 +4,13 @@ import Protected from './components/Protected'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import AttendeeDashboard from './pages/AttendeeDashboard'
+import AdminDashboardPage from './pages/AdminDashboardPage' // Keep the new admin import
 import EventFormPage from './pages/EventFormPage'
 import EventDetailPage from './pages/EventDetailPage'
 import EventAttendeesPage from './pages/EventAttendeesPage'
 import CheckInPage from './pages/CheckInPage'
 import CheckInStart from './pages/CheckInStart'
 import { getActiveRole } from './api/auth'
-import AdminDashboardPage from './pages/AdminDashboardPage'
 
 // Minimal router helpers
 function usePath(){ return location.pathname }
@@ -38,12 +38,11 @@ function ProtectedDashboard() {
   // Route based on user role (uses active role which can be switched)
   if (role === 'attendee') {
     return <AttendeeDashboard />
-  } else if (role === 'organizer') {
+  } else if (role === 'admin') {
+    return <AdminDashboardPage /> // Use the new admin dashboard
+  } else {
+    // organizer or fallback
     return <DashboardPage />
-  }
-  else {
-    // admin
-    return <AdminDashboardPage />
   }
 }
 
@@ -81,6 +80,7 @@ function Auth0Loading() {
 // Main App Routes (after authentication)
 function AppRoutes() {
   const path = usePath()
+  
   if(path.startsWith('/login')) return <LoginPage />
   if(path.startsWith('/events/new')) return <Protected roles={['organizer', 'admin']}><EventFormPage /></Protected>
   if(path.match(/^\/events\/\d+\/attendees$/)) return <Protected roles={['organizer', 'admin']}><EventAttendeesPage /></Protected>
@@ -109,44 +109,22 @@ export default function App(){
     return <Auth0Login />
   }
   
-  // Store real Auth0 token for API calls
+  // Store Auth0 token for API calls
   useEffect(() => {
     if (user && isAuthenticated) {
       console.log('=== AUTH0 DEBUG ===')
       console.log('Auth0 user:', user)
+      console.log('Using user email for authentication')
       
-      getAccessTokenSilently({
-        authorizationParams: {
-          audience: `https://${import.meta.env.VITE_AUTH0_DOMAIN}/api/v2/`,
-          scope: 'openid profile email'
-        }
-      })
-        .then(token => {
-          console.log('✅ Auth0 token obtained successfully')
-          console.log('Token preview:', token.substring(0, 50) + '...')
-          
-          // Store the real Auth0 JWT token
-          localStorage.setItem('token', token)
-          localStorage.setItem('user', JSON.stringify({
-            email: user.email,
-            name: user.name,
-            picture: user.picture
-          }))
-        })
-        .catch(error => {
-          console.error('❌ Error getting Auth0 token:', error)
-          console.log('Using user email for authentication')
-          
-          // Simple fallback: just store user info
-          localStorage.setItem('token', `user_${user.email}`)
-          localStorage.setItem('user', JSON.stringify({
-            email: user.email,
-            name: user.name,
-            picture: user.picture
-          }))
-        })
+      // Simple approach: use user email directly
+      localStorage.setItem('token', `user_${user.email}`)
+      localStorage.setItem('user', JSON.stringify({
+        email: user.email,
+        name: user.name,
+        picture: user.picture
+      }))
     }
-  }, [user, isAuthenticated, getAccessTokenSilently])
+  }, [user, isAuthenticated])
   
   // Render authenticated app
   return <AppRoutes />

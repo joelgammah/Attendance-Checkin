@@ -27,12 +27,12 @@ def get_current_user(
 ):
     token = credentials.credentials
     
-    # Handle user email token format
+    # Handle user email token format (from Auth0)
     if token.startswith("user_"):
         email = token.replace("user_", "")
         user = UserRepository().get_by_email(db, email)
         if not user:
-            # Auto-create user
+            # Auto-create user if they don't exist
             user = auto_create_user_from_auth0(db, email, email.split("@")[0], email)
         return user
     
