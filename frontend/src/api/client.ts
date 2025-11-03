@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL ?? '/api'
+const BASE = import.meta.env.VITE_API_URL || '/api'
 
 export async function fetchJson<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token')

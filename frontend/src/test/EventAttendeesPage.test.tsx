@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { vi } from 'vitest'
 import '@testing-library/jest-dom'
 import EventAttendeesPage from '../pages/EventAttendeesPage'
+import { getEvent } from '../api/events'
 
 // Mock dependencies
 vi.mock('../components/Nav', () => ({
@@ -11,10 +12,29 @@ vi.mock('../components/Nav', () => ({
 
 const mockGetEventAttendees = vi.fn()
 const mockDownloadAttendanceCsv = vi.fn()
+const mockGetEvent = vi.fn()
+
+const mockEvent = {
+  id: 123,
+  name: 'Sample Event',
+  location: 'Room 101',
+  start_time: '2025-01-01T10:00:00Z',
+  end_time: '2025-01-01T12:00:00Z',
+  notes: null,
+  checkin_open_minutes: 15,
+  checkin_token: 'token',
+  attendance_count: 0,
+  recurring: false,
+  weekdays: null,
+  end_date: null,
+  parent_id: null,
+  organizer_name: 'Test User',
+}
 
 vi.mock('../api/events', () => ({
   getEventAttendees: (...args: any[]) => mockGetEventAttendees(...args),
-  downloadAttendanceCsv: (...args: any[]) => mockDownloadAttendanceCsv(...args)
+  downloadAttendanceCsv: (...args: any[]) => mockDownloadAttendanceCsv(...args),
+  getEvent: (...args: any[]) => mockGetEvent(...args),
 }))
 
 // Mock useParams
@@ -25,6 +45,7 @@ vi.mock('../App', () => ({
 describe('EventAttendeesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetEvent.mockResolvedValue(mockEvent)
   })
 
   it('renders loading state', async () => {
@@ -54,7 +75,7 @@ describe('EventAttendeesPage', () => {
   it('renders error state if fetch fails', async () => {
     mockGetEventAttendees.mockRejectedValue(new Error('fail'))
     render(<EventAttendeesPage />)
-    expect(await screen.findByText('Failed to load attendees. Please try again.')).toBeInTheDocument()
+    expect(await screen.findByText('Failed to load event data. Please try again.')).toBeInTheDocument()
     expect(screen.getByText('Error')).toBeInTheDocument()
   })
 
