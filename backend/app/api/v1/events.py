@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from typing import List
 from sqlalchemy.orm import Session
@@ -8,6 +8,7 @@ import secrets
 import re
 
 from app.api.deps import get_db, get_current_user, require_any_role
+from app.repositories.audit_log_repo import AuditLogRepository
 from app.models.user import UserRole, User
 from app.repositories.event_repo import EventRepository
 from app.repositories.attendance_repo import AttendanceRepository
@@ -51,6 +52,7 @@ class EventOut(BaseModel):
     weekdays: List[str] | None = None
     end_date: str | None = None
     parent_id: int | None = None
+    organizer_name: str | None = None
 
     class Config:
         from_attributes = True
@@ -165,6 +167,15 @@ def create_event(
                     )
         db.commit()
         db.refresh(parent_event)
+        AuditLogRepository.log_audit(
+            db,
+            action="create_event",
+            user_email=user.email,
+            timestamp=datetime.utcnow(),
+            resource_type="event",
+            resource_id=str(parent_event.id),
+            details=f"Created event: {parent_event.name}"
+        )
         #returns parent event only for now
         return EventOut(
             id=parent_event.id,
@@ -189,6 +200,32 @@ def create_event(
     except Exception as e:
         raise HTTPException(500, f"Error creating event: {str(e)}")
 
+@router.get("/", response_model=List[EventOut])
+def list_all_events(db: Session = Depends(get_db), admin: User = Depends(require_any_role(UserRole.ADMIN))):
+    """List all events (admin only)"""
+    events = db.query(Event).all()
+    result = []
+    for e in events:
+        attendance_count = att_repo.count_for_event(db, e.id)
+        organizer = db.query(User).filter(User.id == e.organizer_id).first()
+        organizer_name = organizer.name if organizer else "Unknown"
+        result.append(EventOut(
+            id=e.id,
+            name=e.name,
+            location=e.location,
+            start_time=e.start_time.isoformat() + "Z",
+            end_time=e.end_time.isoformat() + "Z",
+            notes=e.notes,
+            checkin_open_minutes=e.checkin_open_minutes,
+            checkin_token=e.checkin_token,
+            attendance_count=attendance_count,
+            recurring=e.recurring,
+            weekdays=e.weekdays,
+            end_date=e.end_date.isoformat() + "Z" if e.end_date else None,
+            parent_id=e.parent_id,
+            organizer_name=organizer_name
+        ))
+    return result
 
 @router.get("/mine/upcoming", response_model=List[EventOut])
 def my_upcoming(db: Session = Depends(get_db), user = Depends(get_current_user)):
@@ -314,6 +351,15 @@ def check_in(
         user_agent=None,
     )
     db.commit()
+    AuditLogRepository.log_audit(
+        db,
+        action="check_in",
+        user_email=user.email,
+        timestamp=datetime.utcnow(),
+        resource_type="attendance",
+        resource_id=str(att.id),
+        details=f"Checked in to event: {event.name}"
+    )
     db.refresh(att)
     return att
 
@@ -478,3 +524,31 @@ def get_event_attendees(event_id: int, db: Session = Depends(get_db), user: User
             checked_in_at=att.checked_in_at.isoformat() + "Z"
         ) for att, usr in records
     ]
+
+# --- Event Deletion: Admin or Organizer ---
+@router.delete("/{event_id}")
+def delete_event(
+    event_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    event = event_repo.get(db, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    user_roles = user.roles()
+    is_admin = UserRole.ADMIN in user_roles
+    is_event_organizer = event.organizer_id == user.id
+    if not (is_admin or is_event_organizer):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    db.delete(event)
+    db.commit()
+    AuditLogRepository.log_audit(
+        db,
+        action="delete_event",
+        user_email=user.email,
+        timestamp=datetime.utcnow(),
+        resource_type="event",
+        resource_id=str(event.id),
+        details=f"Deleted event: {event.name}"
+    )
+    return {"detail": "Event deleted"}
