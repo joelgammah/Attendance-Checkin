@@ -6,14 +6,18 @@ export async function createEvent(payload: any): Promise<EventOut> {
 }
 export async function myUpcoming(): Promise<EventOut[]> { return fetchJson(`/v1/events/mine/upcoming`) }
 export async function myPast(): Promise<EventOut[]> { return fetchJson(`/v1/events/mine/past`) }
+export async function getAllEvents(): Promise<EventOut[]> {
+  return fetchJson<EventOut[]>('/v1/events/');
+}
 export async function getByToken(token: string): Promise<EventOut> { return fetchJson(`/v1/events/by-token/${token}`) }
+// Check-in to event using token is probably not being used
 export async function checkIn(token: string) { return fetchJson(`/v1/events/checkin`, { method: 'POST', body: JSON.stringify({ event_token: token }) }) }
-export function csvUrl(eventId: number) { return `${import.meta.env.VITE_API_URL ?? '/api'}/v1/events/${eventId}/attendance.csv` }
+export function csvUrl(eventId: number) { return `${import.meta.env.VITE_API_URL || '/api'}/v1/events/${eventId}/attendance.csv` }
 export async function downloadAttendanceCsv(eventId: number, eventName?: string) {
   // Adjust token key names as used in your auth flow
   const token = localStorage.getItem('access_token') || localStorage.getItem('token')
   const base = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-  const url = `${base}/api/v1/events/${eventId}/attendance.csv`
+  const url = `${base}/v1/events/${eventId}/attendance.csv`
   const resp = await fetch(url, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     credentials: 'include' // keeps cookies if you switch to cookie auth
@@ -52,4 +56,9 @@ export async function getEvent(eventId: number): Promise<EventOut> {
 
 export async function getEventAttendees(eventId: number): Promise<AttendeeOut[]> {
   return fetchJson<AttendeeOut[]>(`/v1/events/${eventId}/attendees`)
+}
+
+// Delete an event by ID (admin only)
+export async function deleteEvent(eventId: number): Promise<void> {
+  await fetchJson(`/v1/events/${eventId}`, { method: 'DELETE' });
 }
