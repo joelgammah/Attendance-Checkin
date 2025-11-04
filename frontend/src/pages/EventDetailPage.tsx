@@ -31,7 +31,7 @@ export default function EventDetailPage() {
     if (event && canvasRef.current) {
       QRCode.toCanvas(
         canvasRef.current,
-        `${location.origin}/checkin?token=${event.checkin_token}`,
+        event.checkin_token,
         {
           width: 256,
           margin: 2,
@@ -230,10 +230,10 @@ export default function EventDetailPage() {
               
               <div className="text-sm text-gray-500 max-w-md mx-auto">
                 <p className="mb-2">
-                  <strong>Check-in URL:</strong>
+                  <strong>Check-in Token:</strong>
                 </p>
                 <p className="font-mono text-xs bg-gray-50 p-2 rounded border break-all">
-                  {`${location.origin}/checkin?token=${event.checkin_token}`}
+                  {event.checkin_token}
                 </p>
               </div>
             </div>

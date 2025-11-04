@@ -18,9 +18,8 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    role: str
-    roles: list[str] | None = None
-    primary_role: str | None = None
+    roles: list[str]
+    primary_role: str
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -42,7 +41,6 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     
     return TokenResponse(
         access_token=token,
-        role=user.role.value,  # Keep legacy for compatibility
         roles=all_roles,
         primary_role=primary_role
     )

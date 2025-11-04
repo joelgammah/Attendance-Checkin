@@ -341,6 +341,11 @@ def check_in(
     if not (open_at <= now <= end):
         raise HTTPException(400, "Check-in not open for this event")
 
+    # Check if user has already checked in
+    existing_attendance = att_repo.get_by_event_and_user(db, event.id, user.id)
+    if existing_attendance:
+        raise HTTPException(400, "You have already checked in for this event")
+
     # Upsert-like: unique constraint prevents duplicates; try to create
     att = att_repo.create(
         db,

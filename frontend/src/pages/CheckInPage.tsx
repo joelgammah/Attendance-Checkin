@@ -1,12 +1,12 @@
 import React from 'react'
-import { useSearch } from '../router'
+import { useParams } from '../router'
 import { checkIn } from '../api/attendance'
 import { getByToken } from '../api/events'
 import type { EventOut } from '../types'
 import Protected from '../components/Protected'
 
 export default function CheckInPage(){
-  const { token } = useSearch()
+  const { token } = useParams()
   const [state, setState] = React.useState<'loading'|'event-found'|'checking-in'|'success'|'error'>('loading')
   const [msg, setMsg] = React.useState('')
   const [event, setEvent] = React.useState<EventOut | null>(null)
@@ -51,30 +51,147 @@ export default function CheckInPage(){
   return (
     <Protected>
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
+        {/* Nav Bar (consistent with CheckInStart) */}
+        <nav className="w-full flex items-center justify-between p-6 bg-white border-b border-gray-200 shadow-sm">
+          {/* Brand/Logo */}
+          <div className="flex items-center space-x-3">
+            <div
+              className="flex items-center justify-center w-10 h-10 rounded-lg"
+              style={{ backgroundColor: '#95866A' }}
+            >
+              <svg
+                className="w-6 h-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1V6a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1zM5 20h2a1 1 0 001-1v-1a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Terrier Check-In</h1>
+            </div>
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex items-center space-x-1">
+            {/* Dashboard Button */}
+            <button
+              onClick={() => (window.location.href = '/attendee')}
+              className="px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:text-gray-900 transition-colors duration-200"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.1)'
+                e.currentTarget.style.color = '#95866A'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+                e.currentTarget.style.color = '#374151'
+              }}
+            >
+              <div className="flex items-center space-x-2">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z" />
+                </svg>
+                <span>Dashboard</span>
+              </div>
+            </button>
+
+            {/* Divider */}
+            <div className="h-6 w-px bg-gray-300 mx-2"></div>
+
+            {/* Logout Button */}
+            <button
+              onClick={() => {
+                localStorage.removeItem('token')
+                localStorage.removeItem('roles')
+                localStorage.removeItem('primary_role')
+                localStorage.removeItem('active_role')
+                window.location.href = '/login'
+              }}
+              className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200 active:scale-95"
+              style={{ backgroundColor: '#95866A' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#7d6f57'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#95866A'
+              }}
+            >
+              <div className="flex items-center space-x-2">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+                <span>Logout</span>
+              </div>
+            </button>
+          </div>
+        </nav>
+
+        {/* Header Section */}
         <div className="bg-white border-b border-gray-200">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg" style={{backgroundColor: '#95866A'}}>
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1V6a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1zM5 20h2a1 1 0 001-1v-1a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1z" />
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="flex items-center space-x-4">
+              <div
+                className="flex items-center justify-center w-14 h-14 rounded-xl"
+                style={{ backgroundColor: 'rgba(149, 134, 106, 0.1)' }}
+              >
+                <svg
+                  className="w-7 h-7"
+                  style={{ color: '#95866A' }}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
                 </svg>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Event Check-In</h1>
-                <p className="text-gray-600">Terrier Check-In System</p>
+                <h1 className="text-3xl font-bold text-gray-900">Event Check-In</h1>
+                <p className="mt-2 text-gray-600">
+                  {state === 'loading' && 'Finding your event...'}
+                  {state === 'event-found' && 'Event found! Preparing check-in...'}
+                  {state === 'checking-in' && 'Processing your check-in...'}
+                  {state === 'success' && 'Check-in completed successfully!'}
+                  {state === 'error' && 'Check-in encountered an issue.'}
+                </p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm">
             
             {/* Loading State */}
             {state === 'loading' && (
-              <div className="p-12 text-center">
+              <div className="text-center">
                 <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)'}}>
                   <svg className="animate-spin w-8 h-8" style={{color: '#95866A'}} fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -88,7 +205,7 @@ export default function CheckInPage(){
 
             {/* Event Found State */}
             {state === 'event-found' && event && (
-              <div className="p-12 text-center">
+              <div className="text-center">
                 <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)'}}>
                   <svg className="w-8 h-8" style={{color: '#95866A'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -123,7 +240,7 @@ export default function CheckInPage(){
 
             {/* Checking In State */}
             {state === 'checking-in' && event && (
-              <div className="p-12 text-center">
+              <div className="text-center">
                 <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)'}}>
                   <svg className="animate-spin w-8 h-8" style={{color: '#95866A'}} fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -137,7 +254,7 @@ export default function CheckInPage(){
 
             {/* Success State */}
             {state === 'success' && event && (
-              <div className="p-12 text-center">
+              <div className="text-center">
                 <div className="flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full bg-green-100">
                   <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -190,7 +307,7 @@ export default function CheckInPage(){
 
             {/* Error State */}
             {state === 'error' && (
-              <div className="p-12 text-center">
+              <div className="text-center">
                 <div className="flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full bg-red-100">
                   <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -206,7 +323,7 @@ export default function CheckInPage(){
 
                 <div className="space-y-3">
                   <button
-                    onClick={() => window.location.reload()}
+                    onClick={() => window.location.href = '/checkin/start'}
                     className="inline-flex items-center px-6 py-3 text-white font-medium rounded-lg transition-all duration-200 active:scale-95"
                     style={{backgroundColor: '#95866A'}}
                     onMouseEnter={(e) => {

@@ -7,7 +7,8 @@ def test_login_success(client: TestClient):
     assert r.status_code == 200
     body = r.json()
     assert "access_token" in body
-    assert body.get("role") == "organizer"
+    assert body.get("primary_role") == "organizer"
+    assert "organizer" in body.get("roles", [])
 
 
 def test_login_failure_wrong_pwd(client: TestClient):
