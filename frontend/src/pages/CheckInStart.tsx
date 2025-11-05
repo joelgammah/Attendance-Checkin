@@ -1,15 +1,20 @@
 import React, { useState } from 'react'
+import { checkIn } from '../api/attendance'
 
 export default function CheckInStart() {
   const [token, setToken] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setLoading(true)
+
     let t = token.trim()
     if (!t) {
-      setError('Please enter an event token or URL')
+      setError('Please enter an event token')
+      setLoading(false)
       return
     }
 
@@ -20,17 +25,19 @@ export default function CheckInStart() {
         const param = url.searchParams.get('token')
         if (!param) {
           setError('No token found in the URL')
+          setLoading(false)
           return
         }
         t = param
       }
-    } catch (err) {
-      setError('Invalid URL')
-      return
-    }
 
-    // Navigate to /checkin with token as query param
-    window.location.href = `/checkin?token=${encodeURIComponent(t)}`
+      // Redirect to the smooth CheckInPage experience
+      window.location.href = `/checkin/${encodeURIComponent(t)}`
+    } catch (err: any) {
+      setError(err.message || 'Invalid token format')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -98,7 +105,9 @@ export default function CheckInStart() {
           <button
             onClick={() => {
               localStorage.removeItem('token')
-              localStorage.removeItem('role')
+              localStorage.removeItem('roles')
+              localStorage.removeItem('primary_role')
+              localStorage.removeItem('active_role')
               window.location.href = '/login'
             }}
             className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200 active:scale-95"
@@ -132,7 +141,7 @@ export default function CheckInStart() {
 
       {/* Header Section */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center space-x-4">
             <div
               className="flex items-center justify-center w-14 h-14 rounded-xl"
@@ -164,7 +173,7 @@ export default function CheckInStart() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm">
           <form onSubmit={submit} className="space-y-6">
             {error && (
@@ -175,14 +184,15 @@ export default function CheckInStart() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Event URL or Token
+                Event Token
               </label>
               <input
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 className="block w-full rounded-lg border border-gray-300 shadow-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#95866A]"
-                placeholder="https://example.com/checkin?token=abc123 or abc123"
+                placeholder="Enter event token (e.g., a1Bcd234E-5Fg6789HI-Jk012)"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -194,21 +204,33 @@ export default function CheckInStart() {
                   setError('')
                 }}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
+                disabled={loading}
               >
                 Clear
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center px-5 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200"
-                style={{ backgroundColor: '#95866A' }}
+                disabled={loading || !token.trim()}
+                className="inline-flex items-center px-5 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: loading ? '#9ca3af' : '#95866A' }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#7d6f57'
+                  if (!loading) e.currentTarget.style.backgroundColor = '#7d6f57'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#95866A'
+                  if (!loading) e.currentTarget.style.backgroundColor = '#95866A'
                 }}
               >
-                Continue to Check-In
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Checking in...
+                  </>
+                ) : (
+                  'Check In'
+                )}
               </button>
             </div>
           </form>

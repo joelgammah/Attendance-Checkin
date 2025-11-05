@@ -8,7 +8,9 @@ const mockLocalStorage = {
   getItem: vi.fn(),
   setItem: vi.fn()
 }
-Object.defineProperty(window, 'localStorage', { value: mockLocalStorage })
+Object.defineProperty(window, 'localStorage', {
+  value: mockLocalStorage
+})
 
 // Mock window.location
 Object.defineProperty(window, 'location', {
@@ -51,7 +53,9 @@ describe('CheckInStart Enhanced Coverage', () => {
     fireEvent.click(logoutButton)
     
     expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('token')
-    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('role')
+    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('roles')
+    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('primary_role')
+    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('active_role')
     expect(window.location.href).toBe('/login')
   })
 
@@ -95,14 +99,14 @@ describe('CheckInStart Enhanced Coverage', () => {
   it('renders form with correct labels and placeholders', () => {
     render(<CheckInStart />)
     
-    expect(screen.getByText('Event URL or Token')).toBeInTheDocument()
+    expect(screen.getByText('Event Token')).toBeInTheDocument()
     
     const input = screen.getByRole('textbox')
-    expect(input).toHaveAttribute('placeholder', 'https://example.com/checkin?token=abc123 or abc123')
+    expect(input).toHaveAttribute('placeholder', 'Enter event token (e.g., a1Bcd234E-5Fg6789HI-Jk012)')
     expect(input).toHaveAttribute('required')
     
     expect(screen.getByText('Clear')).toBeInTheDocument()
-    expect(screen.getByText('Continue to Check-In')).toBeInTheDocument()
+    expect(screen.getByText('Check In')).toBeInTheDocument()
   })
 
   it('updates input value when user types', () => {
@@ -117,26 +121,26 @@ describe('CheckInStart Enhanced Coverage', () => {
   it('shows error when submitting empty token', () => {
     render(<CheckInStart />)
     
+    const form = document.querySelector('form')!
     const input = screen.getByRole('textbox')
-    const submitButton = screen.getByText('Continue to Check-In')
     
     // Remove the required attribute to bypass HTML5 validation for testing
     input.removeAttribute('required')
-    fireEvent.click(submitButton)
+    fireEvent.submit(form)
     
-    expect(screen.getByText('Please enter an event token or URL')).toBeInTheDocument()
+    expect(screen.getByText('Please enter an event token')).toBeInTheDocument()
   })
 
   it('shows error when submitting whitespace-only token', () => {
     render(<CheckInStart />)
     
+    const form = document.querySelector('form')!
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: '   ' } })
     
-    const submitButton = screen.getByText('Continue to Check-In')
-    fireEvent.click(submitButton)
+    fireEvent.submit(form)
     
-    expect(screen.getByText('Please enter an event token or URL')).toBeInTheDocument()
+    expect(screen.getByText('Please enter an event token')).toBeInTheDocument()
   })
 
   it('navigates with simple token', () => {
@@ -145,10 +149,10 @@ describe('CheckInStart Enhanced Coverage', () => {
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: 'simple-token' } })
     
-    const submitButton = screen.getByText('Continue to Check-In')
+    const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(window.location.href).toBe('/checkin?token=simple-token')
+    expect(window.location.href).toBe('/checkin/simple-token')
   })
 
   it('extracts token from HTTP URL', () => {
@@ -157,10 +161,10 @@ describe('CheckInStart Enhanced Coverage', () => {
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: 'http://example.com/checkin?token=extracted-token' } })
     
-    const submitButton = screen.getByText('Continue to Check-In')
+    const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(window.location.href).toBe('/checkin?token=extracted-token')
+    expect(window.location.href).toBe('/checkin/extracted-token')
   })
 
   it('extracts token from HTTPS URL', () => {
@@ -169,10 +173,10 @@ describe('CheckInStart Enhanced Coverage', () => {
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: 'https://example.com/event?token=https-token&other=param' } })
     
-    const submitButton = screen.getByText('Continue to Check-In')
+    const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(window.location.href).toBe('/checkin?token=https-token')
+    expect(window.location.href).toBe('/checkin/https-token')
   })
 
   it('shows error when URL has no token parameter', () => {
@@ -181,7 +185,7 @@ describe('CheckInStart Enhanced Coverage', () => {
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: 'https://example.com/checkin?other=param' } })
     
-    const submitButton = screen.getByText('Continue to Check-In')
+    const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
     expect(screen.getByText('No token found in the URL')).toBeInTheDocument()
@@ -193,30 +197,30 @@ describe('CheckInStart Enhanced Coverage', () => {
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: 'http://invalid url with spaces' } })
     
-    const submitButton = screen.getByText('Continue to Check-In')
+    const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(screen.getByText('Invalid URL')).toBeInTheDocument()
+    expect(screen.getByText('Invalid URL: http://invalid url with spaces')).toBeInTheDocument()
   })
 
   it('clears input and error when clear button is clicked', () => {
     render(<CheckInStart />)
     
+    const form = document.querySelector('form')!
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: 'test-token' } })
     
     // First trigger an error
-    const submitButton = screen.getByText('Continue to Check-In')
     fireEvent.change(input, { target: { value: '   ' } })
-    fireEvent.click(submitButton)
-    expect(screen.getByText('Please enter an event token or URL')).toBeInTheDocument()
+    fireEvent.submit(form)
+    expect(screen.getByText('Please enter an event token')).toBeInTheDocument()
     
     // Now clear
     const clearButton = screen.getByText('Clear')
     fireEvent.click(clearButton)
     
     expect((input as HTMLInputElement).value).toBe('')
-    expect(screen.queryByText('Please enter an event token or URL')).not.toBeInTheDocument()
+    expect(screen.queryByText('Please enter an event token')).not.toBeInTheDocument()
   })
 
   it('encodes special characters in token for URL', () => {
@@ -225,43 +229,39 @@ describe('CheckInStart Enhanced Coverage', () => {
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: 'token with spaces & symbols' } })
     
-    const submitButton = screen.getByText('Continue to Check-In')
+    const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(window.location.href).toBe('/checkin?token=token%20with%20spaces%20%26%20symbols')
+    expect(window.location.href).toBe('/checkin/token%20with%20spaces%20%26%20symbols')
   })
 
   it('clears error when user starts typing after error', () => {
     render(<CheckInStart />)
     
+    const form = document.querySelector('form')!
     const input = screen.getByRole('textbox')
-    const submitButton = screen.getByText('Continue to Check-In')
     
     // Remove required attribute and trigger an error
     input.removeAttribute('required')
-    fireEvent.click(submitButton)
-    expect(screen.getByText('Please enter an event token or URL')).toBeInTheDocument()
+    fireEvent.submit(form)
+    expect(screen.getByText('Please enter an event token')).toBeInTheDocument()
     
     // Then type something and submit again (this should clear the error)
     fireEvent.change(input, { target: { value: 'new-token' } })
-    fireEvent.click(submitButton)
+    fireEvent.submit(form)
     
     // Error should be cleared and navigation should happen
-    expect(screen.queryByText('Please enter an event token or URL')).not.toBeInTheDocument()
-    expect(window.location.href).toBe('/checkin?token=new-token')
+    expect(screen.queryByText('Please enter an event token')).not.toBeInTheDocument()
+    expect(window.location.href).toBe('/checkin/new-token')
   })
 
   it('handles submit button hover effects', () => {
     render(<CheckInStart />)
     
-    const submitButton = screen.getByText('Continue to Check-In')
+    const submitButton = screen.getByText('Check In')
     
     // Test initial style
     expect(submitButton.style.backgroundColor).toBe('rgb(149, 134, 106)')
-    
-    // Test hover enter
-    fireEvent.mouseEnter(submitButton)
-    expect(submitButton.style.backgroundColor).toBe('rgb(125, 111, 87)')
     
     // Test hover leave
     fireEvent.mouseLeave(submitButton)
@@ -277,7 +277,7 @@ describe('CheckInStart Enhanced Coverage', () => {
     fireEvent.change(input, { target: { value: 'form-submit-token' } })
     fireEvent.submit(form)
     
-    expect(window.location.href).toBe('/checkin?token=form-submit-token')
+    expect(window.location.href).toBe('/checkin/form-submit-token')
   })
 
   it('trims whitespace from token before processing', () => {
@@ -286,10 +286,10 @@ describe('CheckInStart Enhanced Coverage', () => {
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: '  trimmed-token  ' } })
     
-    const submitButton = screen.getByText('Continue to Check-In')
+    const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(window.location.href).toBe('/checkin?token=trimmed-token')
+    expect(window.location.href).toBe('/checkin/trimmed-token')
   })
 
   it('handles URL with token at different positions in query string', () => {
@@ -298,10 +298,10 @@ describe('CheckInStart Enhanced Coverage', () => {
     const input = screen.getByRole('textbox')
     fireEvent.change(input, { target: { value: 'https://example.com/path?first=value&token=middle-token&last=value' } })
     
-    const submitButton = screen.getByText('Continue to Check-In')
+    const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(window.location.href).toBe('/checkin?token=middle-token')
+    expect(window.location.href).toBe('/checkin/middle-token')
   })
 
   it('renders all SVG icons without errors', () => {

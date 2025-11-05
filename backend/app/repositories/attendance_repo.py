@@ -22,3 +22,9 @@ class AttendanceRepository(BaseRepository[Attendance]):
             .where(Attendance.attendee_id == attendee_id)
             .order_by(Attendance.checked_in_at.desc())
         ).scalars().all()
+    def get_by_event_and_user(self, db: Session, event_id: int, user_id: int):
+        """Get attendance record for a specific event and user"""
+        return db.execute(
+            select(Attendance)
+            .where(Attendance.event_id == event_id, Attendance.attendee_id == user_id)
+        ).scalar_one_or_none()

@@ -44,8 +44,8 @@ def on_startup():
                 ("garrettal@wofford.edu", "Aaron Garrett", [UserRole.ORGANIZER, UserRole.ATTENDEE]),  # Professor with multi-role
             ]
             for email, name, roles in demo:
-                # Use first role as legacy primary role
-                u = User(email=email, name=name, role=roles[0], password_hash=get_password_hash(email.split("@")[0]))
+                # Create user without legacy role field
+                u = User(email=email, name=name, password_hash=get_password_hash(email.split("@")[0]))
                 db.add(u)
                 db.flush()  # Get the ID
                 
@@ -55,9 +55,5 @@ def on_startup():
             
             db.commit()
         else:
-            # Backfill existing users (one-time migration)
-            users = db.query(User).all()
-            for u in users:
-                if not any(ra.role == u.role.value for ra in u.role_assignments):
-                    db.add(UserRoleAssignment(user_id=u.id, role=u.role.value))
-            db.commit()
+            # No backfill needed since legacy role field is removed
+            pass

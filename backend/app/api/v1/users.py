@@ -18,9 +18,8 @@ class MeResponse(BaseModel):
     id: int
     email: str
     name: str
-    role: str
-    roles: list[str] | None = None
-    primary_role: str | None = None
+    roles: list[str]
+    primary_role: str
 
 class UserCreate(BaseModel):
     name: str
@@ -38,7 +37,6 @@ def me(user = Depends(get_current_user)):
         id=user.id,
         email=user.email,
         name=user.name,
-        role=user.role.value,  # Keep legacy for compatibility
         roles=all_roles,
         primary_role=primary_role
     )

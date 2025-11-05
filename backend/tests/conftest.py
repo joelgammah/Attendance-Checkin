@@ -45,17 +45,18 @@ def setup_test_db():
         user = User(
             email=email, 
             name=name, 
-            role=role, 
             password_hash=get_password_hash(email.split("@")[0])
         )
         db.add(user)
     db.commit()
     
-    # Backfill role assignments for test users
+    # Add role assignments for test users
     users = db.query(User).all()
     for u in users:
-        # Add role assignment for legacy role
-        db.add(UserRoleAssignment(user_id=u.id, role=u.role.value))
+        # Find the corresponding role from demo_users
+        user_role = next((role for email, name, role in demo_users if email == u.email), UserRole.ATTENDEE)
+        # Add role assignment
+        db.add(UserRoleAssignment(user_id=u.id, role=user_role.value))
         # Aaron Garrett gets both organizer and attendee
         if u.email == "garrettal@wofford.edu":
             db.add(UserRoleAssignment(user_id=u.id, role=UserRole.ATTENDEE.value))

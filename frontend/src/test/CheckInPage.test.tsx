@@ -4,7 +4,7 @@ import '@testing-library/jest-dom'
 
 // Mock dependencies
 vi.mock('../router', () => ({
-  useSearch: vi.fn()
+  useParams: vi.fn()
 }))
 
 vi.mock('../api/attendance', () => ({
@@ -20,12 +20,12 @@ vi.mock('../components/Protected', () => ({
 }))
 
 // Import the mocked functions AFTER the mocks are set up
-import { useSearch } from '../router'
+import { useParams } from '../router'
 import { checkIn } from '../api/attendance'
 import { getByToken } from '../api/events'
 
 // Cast to access mock methods
-const mockUseSearch = useSearch as any
+const mockUseParams = useParams as any
 const mockCheckIn = checkIn as any
 const mockGetByToken = getByToken as any
 
@@ -38,7 +38,7 @@ describe('CheckInPage Improved Coverage', () => {
 
   // Add specific assertions for UI elements and state transitions
   it('renders specific loading state text and spinner', async () => {
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockImplementation(() => new Promise(() => {})) // Never resolves
     
     render(<CheckInPage />)
@@ -49,7 +49,7 @@ describe('CheckInPage Improved Coverage', () => {
   })
 
   it('renders error state with specific error messages', async () => {
-    mockUseSearch.mockReturnValue({ token: null })
+    mockUseParams.mockReturnValue({ token: null })
     
     render(<CheckInPage />)
     
@@ -68,7 +68,7 @@ describe('CheckInPage Improved Coverage', () => {
       start_time: '2024-01-01T10:00:00Z'
     }
     
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockResolvedValue(mockEvent)
     mockCheckIn.mockImplementation(() => new Promise(() => {})) // Never resolves to stay in event-found
     
@@ -90,7 +90,7 @@ describe('CheckInPage Improved Coverage', () => {
       start_time: '2024-01-01T10:00:00Z'
     }
     
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockResolvedValue(mockEvent)
     mockCheckIn.mockImplementation(() => new Promise(() => {})) // Hangs in checking-in state
     
@@ -116,7 +116,7 @@ describe('CheckInPage Improved Coverage', () => {
       start_time: '2024-01-01T10:00:00Z'
     }
     
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockResolvedValue(mockEvent)
     mockCheckIn.mockResolvedValue({ success: true })
     
@@ -131,23 +131,23 @@ describe('CheckInPage Improved Coverage', () => {
   })
 
   it('renders header with correct text', () => {
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockImplementation(() => new Promise(() => {}))
     
     render(<CheckInPage />)
     
     expect(screen.getByText('Event Check-In')).toBeInTheDocument()
-    expect(screen.getByText('Terrier Check-In System')).toBeInTheDocument()
+    expect(screen.getByText('Terrier Check-In')).toBeInTheDocument()
   })
 
-  it('handles window.location.reload on try again button', async () => {
-    const mockReload = vi.fn()
+  it('handles try again button click', async () => {
+    // Mock window.location.href assignment
     Object.defineProperty(window, 'location', {
-      value: { reload: mockReload },
+      value: { href: '' },
       writable: true
     })
     
-    mockUseSearch.mockReturnValue({ token: 'invalid-token' })
+    mockUseParams.mockReturnValue({ token: 'invalid-token' })
     mockGetByToken.mockRejectedValue(new Error('Event not found'))
     
     render(<CheckInPage />)
@@ -155,12 +155,12 @@ describe('CheckInPage Improved Coverage', () => {
     await waitFor(() => {
       const tryAgainButton = screen.getByText('Try Again')
       fireEvent.click(tryAgainButton)
-      expect(mockReload).toHaveBeenCalled()
+      expect(window.location.href).toBe('/checkin/start')
     })
   })
 
   it('renders dashboard links with correct href', async () => {
-    mockUseSearch.mockReturnValue({ token: 'invalid-token' })
+    mockUseParams.mockReturnValue({ token: 'invalid-token' })
     mockGetByToken.mockRejectedValue(new Error('Event not found'))
     
     render(<CheckInPage />)
@@ -172,7 +172,7 @@ describe('CheckInPage Improved Coverage', () => {
   })
 
   it('handles hover effects on buttons', async () => {
-    mockUseSearch.mockReturnValue({ token: 'invalid-token' })
+    mockUseParams.mockReturnValue({ token: 'invalid-token' })
     mockGetByToken.mockRejectedValue(new Error('Event not found'))
     
     render(<CheckInPage />)
@@ -198,7 +198,7 @@ describe('CheckInPage Improved Coverage', () => {
       start_time: '2024-01-01T10:00:00Z'
     }
     
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockResolvedValue(mockEvent)
     mockCheckIn.mockResolvedValue({ success: true })
     
@@ -218,7 +218,7 @@ describe('CheckInPage Improved Coverage', () => {
   })
 
   it('handles error message fallback when no message provided', async () => {
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockRejectedValue(new Error()) // No message
     
     render(<CheckInPage />)
@@ -237,7 +237,7 @@ describe('CheckInPage Improved Coverage', () => {
       start_time: '2024-01-01T10:00:00Z'
     }
     
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockResolvedValue(mockEvent)
     mockCheckIn.mockResolvedValue({ success: true })
     
@@ -251,7 +251,7 @@ describe('CheckInPage Improved Coverage', () => {
 
   // Test error states to hit the error handling code
   it('handles token validation errors', async () => {
-    mockUseSearch.mockReturnValue({ token: '' })
+    mockUseParams.mockReturnValue({ token: '' })
     
     const { container } = render(<CheckInPage />)
     
@@ -261,7 +261,7 @@ describe('CheckInPage Improved Coverage', () => {
   })
 
   it('handles getByToken API errors', async () => {
-    mockUseSearch.mockReturnValue({ token: 'invalid-token' })
+    mockUseParams.mockReturnValue({ token: 'invalid-token' })
     mockGetByToken.mockRejectedValue(new Error('Event not found'))
     
     const { container } = render(<CheckInPage />)
@@ -278,7 +278,7 @@ describe('CheckInPage Improved Coverage', () => {
       location: 'Test Location'
     }
     
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockResolvedValue(mockEvent)
     mockCheckIn.mockRejectedValue(new Error('Check-in failed'))
     
@@ -291,7 +291,7 @@ describe('CheckInPage Improved Coverage', () => {
 
   // Test different event data structures
   it('handles minimal event data', async () => {
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockResolvedValue({ id: 1, name: 'Minimal Event' })
     mockCheckIn.mockResolvedValue({ success: true })
     
@@ -303,7 +303,7 @@ describe('CheckInPage Improved Coverage', () => {
   })
 
   it('handles complete event data', async () => {
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockResolvedValue({
       id: 1,
       name: 'Complete Event',
@@ -323,7 +323,7 @@ describe('CheckInPage Improved Coverage', () => {
 
   // Test edge cases
   it('handles undefined token', async () => {
-    mockUseSearch.mockReturnValue({ token: undefined })
+    mockUseParams.mockReturnValue({ token: undefined })
     
     const { container } = render(<CheckInPage />)
     
@@ -333,7 +333,7 @@ describe('CheckInPage Improved Coverage', () => {
   })
 
   it('handles null token', async () => {
-    mockUseSearch.mockReturnValue({ token: null })
+    mockUseParams.mockReturnValue({ token: null })
     
     const { container } = render(<CheckInPage />)
     
@@ -343,7 +343,7 @@ describe('CheckInPage Improved Coverage', () => {
   })
 
   it('handles missing search params', async () => {
-    mockUseSearch.mockReturnValue({})
+    mockUseParams.mockReturnValue({})
     
     const { container } = render(<CheckInPage />)
     
@@ -354,7 +354,7 @@ describe('CheckInPage Improved Coverage', () => {
 
   // FIXED: Remove problematic window mocking
   it('handles button interactions safely', async () => {
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockResolvedValue({ id: 1, name: 'Test Event' })
     mockCheckIn.mockResolvedValue({ success: true })
     
@@ -381,7 +381,7 @@ describe('CheckInPage Improved Coverage', () => {
   it('handles component lifecycle safely', async () => {
     const mockEvent = { id: 1, name: 'Test Event' }
     
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockResolvedValue(mockEvent)
     mockCheckIn.mockResolvedValue({ success: true })
     
@@ -398,7 +398,7 @@ describe('CheckInPage Improved Coverage', () => {
 
   // Test different API response formats
   it('handles different checkIn response formats', async () => {
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockResolvedValue({ id: 1, name: 'Test Event' })
     mockCheckIn.mockResolvedValue({ message: 'Success', data: {} })
     
@@ -410,7 +410,7 @@ describe('CheckInPage Improved Coverage', () => {
   })
 
   it('handles network timeout scenarios', async () => {
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockImplementation(() => 
       Promise.reject(new Error('Network timeout'))
     )
@@ -426,7 +426,7 @@ describe('CheckInPage Improved Coverage', () => {
   it('handles multiple API call scenarios', async () => {
     const mockEvent = { id: 1, name: 'Test Event' }
     
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockResolvedValue(mockEvent)
     mockCheckIn.mockResolvedValue({ success: true })
     
@@ -438,7 +438,7 @@ describe('CheckInPage Improved Coverage', () => {
   })
 
   it('handles different token formats', async () => {
-    mockUseSearch.mockReturnValue({ token: 'very-long-token-12345-abcdef' })
+    mockUseParams.mockReturnValue({ token: 'very-long-token-12345-abcdef' })
     mockGetByToken.mockResolvedValue({ id: 1, name: 'Test Event' })
     mockCheckIn.mockResolvedValue({ success: true })
     
@@ -450,7 +450,7 @@ describe('CheckInPage Improved Coverage', () => {
   })
 
   it('handles API response with different status codes', async () => {
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockRejectedValue({ status: 404, message: 'Not found' })
     
     const { container } = render(<CheckInPage />)
@@ -461,7 +461,7 @@ describe('CheckInPage Improved Coverage', () => {
   })
 
   it('handles async operation timing', async () => {
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockImplementation(() => 
       new Promise(resolve => setTimeout(() => resolve({ id: 1, name: 'Delayed Event' }), 100))
     )
@@ -477,7 +477,7 @@ describe('CheckInPage Improved Coverage', () => {
   })
 
   it('handles unmounting during async operations', async () => {
-    mockUseSearch.mockReturnValue({ token: 'test-token' })
+    mockUseParams.mockReturnValue({ token: 'test-token' })
     mockGetByToken.mockImplementation(() => 
       new Promise(resolve => setTimeout(() => resolve({ id: 1, name: 'Test Event' }), 500))
     )
