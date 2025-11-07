@@ -9,7 +9,8 @@ vi.stubGlobal('fetch', vi.fn(async (input: any, init?: any) => {
     return new Response(JSON.stringify({ 
       access_token: 't', 
       token_type: 'bearer', 
-      role: 'organizer' 
+      roles: ['organizer'],
+      primary_role: 'organizer'
     }), { 
       headers: { 'content-type': 'application/json' } 
     })
@@ -47,8 +48,8 @@ describe('LoginPage', () => {
     // Look for email input by value instead of placeholder
     expect(screen.getByDisplayValue('grayj@wofford.edu')).toBeInTheDocument()
     
-    // Look for password input - might need to adjust this too
-    const passwordInput = screen.getByLabelText(/password/i) || screen.getByDisplayValue('') || screen.getByRole('textbox', { name: /password/i })
+    // Look for password input by id
+    const passwordInput = screen.getByLabelText(/password/i)
     expect(passwordInput).toBeInTheDocument()
   })
 
@@ -57,7 +58,7 @@ describe('LoginPage', () => {
     
     // Find inputs by different methods
     const emailInput = screen.getByDisplayValue('grayj@wofford.edu')
-    const passwordInput = screen.getByLabelText(/password/i) || screen.getByRole('textbox', { name: /password/i })
+    const passwordInput = screen.getByLabelText(/password/i)
     
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
     fireEvent.change(passwordInput, { target: { value: 'password' } })
@@ -71,26 +72,45 @@ describe('LoginPage', () => {
     })
     
     await waitFor(() => {
-      expect(localStorage.getItem('role')).toBe('organizer')
+      expect(localStorage.getItem('primary_role')).toBe('organizer')
+    })
+    
+    await waitFor(() => {
+      expect(localStorage.getItem('roles')).toBe('["organizer"]')
+    })
+    
+    await waitFor(() => {
+      expect(localStorage.getItem('active_role')).toBe('organizer')
     })
   })
 
   it('shows loading state during login', async () => {
+    // Mock a slow fetch to see loading state
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      return new Response(JSON.stringify({ 
+        access_token: 't', 
+        token_type: 'bearer', 
+        roles: ['organizer'],
+        primary_role: 'organizer'
+      }), { 
+        headers: { 'content-type': 'application/json' } 
+      })
+    }))
+    
     render(<LoginPage />)
     
     const emailInput = screen.getByDisplayValue('grayj@wofford.edu')
-    const passwordInput = screen.getByLabelText(/password/i) || screen.getByRole('textbox', { name: /password/i })
+    const passwordInput = screen.getByLabelText(/password/i)
     
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
     fireEvent.change(passwordInput, { target: { value: 'password' } })
     
     fireEvent.click(screen.getByText('Sign in'))
     
-    // Should show loading state - adjust this text to match your actual loading text
+    // Should show loading state
     await waitFor(() => {
-      // Look for loading text or disabled button
-      const button = screen.getByText('Sign in')
-      expect(button).toBeInTheDocument()
+      expect(screen.getByText('Signing in...')).toBeInTheDocument()
     })
   })
 
@@ -102,7 +122,7 @@ describe('LoginPage', () => {
     render(<LoginPage />)
     
     const emailInput = screen.getByDisplayValue('grayj@wofford.edu')
-    const passwordInput = screen.getByLabelText(/password/i) || screen.getByRole('textbox', { name: /password/i })
+    const passwordInput = screen.getByLabelText(/password/i)
     
     fireEvent.change(emailInput, { target: { value: 'wrong@example.com' } })
     fireEvent.change(passwordInput, { target: { value: 'wrongpassword' } })
@@ -119,10 +139,5 @@ describe('LoginPage', () => {
     // Simple test to boost coverage
     render(<LoginPage />)
     expect(screen.getByText('Sign in to access Terrier Check-In')).toBeInTheDocument()
-  })
-
-  it('debug what is rendered', () => {
-    render(<LoginPage />)
-    screen.debug() // This will show you exactly what's in the component
   })
 })

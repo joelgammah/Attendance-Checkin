@@ -40,8 +40,8 @@ export default function LoginPage(){
       // Store email for later use
       localStorage.setItem('user_email', email)
       
-      // Role-based routing (prefer primary_role if available)
-      const effectiveRole = loginData.primary_role || loginData.role
+      // Role-based routing
+      const effectiveRole = loginData.primary_role
       if (effectiveRole === 'attendee') {
         location.href = '/'  // Attendees go to their dashboard
       } else if (effectiveRole === 'organizer' || effectiveRole === 'admin') {

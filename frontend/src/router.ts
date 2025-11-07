@@ -1,6 +1,8 @@
 export function useParams(){
-  const m = location.pathname.match(/\/events\/(.+)$/)
-  return { token: m? m[1]: '' }
+  // Handle both /events/:token and /checkin/:token patterns
+  const eventMatch = location.pathname.match(/\/events\/(.+)$/)
+  const checkinMatch = location.pathname.match(/\/checkin\/(.+)$/)
+  return { token: eventMatch?.[1] || checkinMatch?.[1] || '' }
 }
 
 export function useSearch(){
