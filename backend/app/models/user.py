@@ -2,7 +2,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import String
 from app.models.base import Base, IDMixin
 import enum
-from typing import Iterable
+from typing import Iterable, Optional
 
 
 class UserRole(str, enum.Enum):
@@ -17,6 +17,7 @@ class User(IDMixin, Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(255))
     password_hash: Mapped[str] = mapped_column(String(255))
+    auth0_sub: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True)
 
     events = relationship("Event", back_populates="organizer")
     role_assignments = relationship("UserRoleAssignment", back_populates="user", cascade="all, delete-orphan", lazy="selectin")
