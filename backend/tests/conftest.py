@@ -14,6 +14,14 @@ SQLITE_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(SQLITE_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+@pytest.fixture
+def db():
+    """Provide test database session"""
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 def override_get_db():
     """Simple database override for tests."""
@@ -39,6 +47,7 @@ def setup_test_db():
         ("podrebarackc@wofford.edu", "Kate Podrebarac", UserRole.ATTENDEE),
         ("gammahja@wofford.edu", "Joel Gammah", UserRole.ATTENDEE),
         ("garrettal@wofford.edu", "Aaron Garrett", UserRole.ORGANIZER),
+        ("admin@wofford.edu", "Admin User", UserRole.ADMIN),
     ]
     
     for email, name, role in demo_users:
@@ -90,3 +99,10 @@ def token_student(client):
     j = res.json()
     assert res.status_code == 200, f"login failed for test student: {j}"
     return j["access_token"]
+
+@pytest.fixture
+def token_admin(client):
+    res = client.post("/api/v1/auth/login", json={"email": "admin@wofford.edu", "password": "admin"})
+    return res.json()["access_token"]
+
+
