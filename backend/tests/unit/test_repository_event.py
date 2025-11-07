@@ -15,7 +15,6 @@ class TestEventRepository:
             email=email,
             name="Organizer",
             password_hash="dummy",
-            role=UserRole.ATTENDEE
         )
         db.add(user)
         db.commit()

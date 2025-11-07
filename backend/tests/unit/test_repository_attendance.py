@@ -17,19 +17,16 @@ class TestAttendanceRepository:
             email="test@example.com",
             name="Test User",
             password_hash="dummy",  # supply required columns
-            role=UserRole.ATTENDEE
         )
         user2 = User(
             email="test2@example.com",
             name="Test User 2",
             password_hash="dummy",  # supply required columns
-            role=UserRole.ATTENDEE
         )
         user3 = User(
             email="test3@example.com",
             name="Test User 3",
             password_hash="dummy",  # supply required columns
-            role=UserRole.ORGANIZER
         )
         db.add_all([user1, user2, user3])
         db.commit()
@@ -65,7 +62,6 @@ class TestAttendanceRepository:
             email="test2@example.com",
             name="Test User 2",
             password_hash="dummy",
-            role=UserRole.ATTENDEE
         )
         db.add(user)
         db.commit()
@@ -91,7 +87,6 @@ class TestAttendanceRepository:
             email="test3@example.com",
             name="Test User 3",
             password_hash="dummy",
-            role=UserRole.ATTENDEE
         )
         db.add(user)
         db.commit()

@@ -12,20 +12,26 @@ class TestUserRepository:
     @pytest.fixture
     def create_user(self, db):
         """Helper to create a user with unique email."""
-        def _create_user(email: str = None):
+        def _create_user(email: str = None, roles=None):
             if email is None:
                 email = f"test{datetime.now().timestamp()}@example.com"
+            if roles is None:
+                roles = [UserRole.ATTENDEE]
+            
             user = User(
                 email=email,
                 name="Test User",
-                password_hash="dummy",
-                role=UserRole.ATTENDEE
+                password_hash="dummy"
             )
             db.add(user)
+            db.flush()  # assign an ID before adding roles
+            for role in roles:
+                user.add_role(role)
             db.commit()
             db.refresh(user)
             return user
         return _create_user
+
 
     def test_get(self, db, repo, create_user):
         user = create_user()
@@ -44,12 +50,9 @@ class TestUserRepository:
 
     def test_create(self, db, repo):
         email = f"newuser{datetime.now().timestamp()}@example.com"
-        user = repo.create(db, email=email, name="New User", password_hash="dummy", role=UserRole.ATTENDEE)
+        user = repo.create(db, email=email, name="New User", password_hash="dummy")
         assert user.id is not None
         assert user.email == email
-
-    # Skipping delete test: method is a direct call to SQLAlchemy's delete, so testing is redundant
-
 
     def test_get_by_email(self, db, repo, create_user):
         email = f"unique{datetime.now().timestamp()}@example.com"
