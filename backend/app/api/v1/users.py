@@ -148,16 +148,17 @@ def create_user(
     user = User(
         name=user_in.name,
         email=user_in.email,
-        role=user_in.roles[0] if user_in.roles else UserRole.ATTENDEE,
+        #role=user_in.roles[0] if user_in.roles else UserRole.ATTENDEE,
         password_hash=hashed_password,
     )
     db.add(user)
-    db.commit()
-    db.refresh(user)
-    # Assign roles
+    db.flush()
     for role in user_in.roles:
         user.add_role(role)
+        
     db.commit()
+    db.refresh(user)
+
     AuditLogRepository.log_audit(
         db,
         action="create_user",
