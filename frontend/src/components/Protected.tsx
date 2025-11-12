@@ -1,18 +1,42 @@
 import React from 'react'
 import { getActiveRole } from '../api/auth'
+import { useAuth0 } from '@auth0/auth0-react'
 
 export function useAuth(){
-  const [authed, setAuthed] = React.useState<boolean>(!!localStorage.getItem('token'))
+  const { isAuthenticated, isLoading } = useAuth0()
+  const [authed, setAuthed] = React.useState<boolean>(!!localStorage.getItem('token') || isAuthenticated)
+  
   React.useEffect(()=>{
-    const onStorage = ()=> setAuthed(!!localStorage.getItem('token'))
+    const onStorage = ()=> setAuthed(!!localStorage.getItem('token') || isAuthenticated)
     window.addEventListener('storage', onStorage)
     return ()=> window.removeEventListener('storage', onStorage)
-  },[])
+  },[isAuthenticated])
+  
+  // Update when Auth0 loading state changes - trust Auth0 authentication
+  React.useEffect(()=>{
+    // If Auth0 is authenticated OR we have a localStorage token, consider user authenticated
+    setAuthed(isAuthenticated || !!localStorage.getItem('token'))
+  },[isAuthenticated, isLoading])
+  
   return authed
 }
 
 export function Link(props: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to: string }){
-  return <a {...props} href={props.to} className={"text-blue-600 hover:underline "+(props.className??'')} />
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    // Use history.pushState to preserve Auth0 authentication state
+    history.pushState({}, '', props.to)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }
+  
+  return (
+    <a 
+      {...props} 
+      href={props.to} 
+      onClick={handleClick}
+      className={"text-blue-600 hover:underline "+(props.className??'')} 
+    />
+  )
 }
 
 interface ProtectedProps {

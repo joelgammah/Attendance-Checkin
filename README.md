@@ -70,6 +70,7 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 
 ### Backend
 ```bash
+source .venv/bin/activate
 cd backend
 python -m pytest -q --cov=app --cov-report=term-missing:skip-covered --cov-report=html --cov-fail-under=80
 ```
@@ -130,3 +131,24 @@ docker compose up --build
 - Admin console for org/user management
 - Anti‑cheat: rotating tokens, GPS/Bluetooth geofencing, one‑time links
 - Attendance detail views and CSV column enrichment (names/emails)# Attendance-Checkin
+
+## Auth0 (local dev env variables)
+
+If you enable Auth0 for local testing, add these env vars to the frontend `.env` (Vite) and backend environment respectively. Replace `YOUR_TENANT_DOMAIN` and `YOUR_SPA_CLIENT_ID` with values from the Auth0 dashboard.
+
+Frontend (`frontend/.env`):
+```
+VITE_AUTH0_DOMAIN=YOUR_TENANT_DOMAIN            # e.g. dev-xxx.us.auth0.com
+VITE_AUTH0_CLIENT_ID=YOUR_SPA_CLIENT_ID
+VITE_AUTH0_AUDIENCE=https://attendance-api
+VITE_AUTH0_REDIRECT_URI=http://localhost:5173/callback
+VITE_API_URL=http://localhost:8000
+```
+
+Backend (export or `backend/.env`):
+```
+AUTH0_DOMAIN=YOUR_TENANT_DOMAIN
+AUTH0_AUDIENCE=https://attendance-api
+```
+
+Make sure the Auth0 API Identifier (Audience) exactly matches `AUTH0_AUDIENCE`.

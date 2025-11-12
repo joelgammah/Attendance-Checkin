@@ -14,7 +14,7 @@ export async function login(email: string, password: string): Promise<LoginRespo
   
   // Store auth data
   localStorage.setItem('token', data.access_token)
-  
+  localStorage.setItem('user_email', email)
   localStorage.setItem('roles', JSON.stringify(data.roles))
   localStorage.setItem('primary_role', data.primary_role)
   
@@ -22,6 +22,42 @@ export async function login(email: string, password: string): Promise<LoginRespo
   localStorage.setItem('active_role', data.primary_role)
   
   return data
+}
+
+export interface UserProfile {
+  id: number
+  email: string
+  name: string
+  roles: string[]
+  primary_role: string
+}
+
+export async function getUserProfile(): Promise<UserProfile> {
+  return fetchJson<UserProfile>('/v1/users/me')
+}
+
+export async function initializeAuth0UserProfile(): Promise<void> {
+  try {
+    const profile = await getUserProfile()
+    
+    // Store profile data in localStorage to match legacy flow
+    localStorage.setItem('user_email', profile.email)
+    localStorage.setItem('roles', JSON.stringify(profile.roles))
+    localStorage.setItem('primary_role', profile.primary_role)
+    localStorage.setItem('active_role', profile.primary_role)
+    
+    // Trigger a storage event to notify components of the update
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'primary_role',
+      newValue: profile.primary_role
+    }))
+  } catch (error: any) {
+    // Provide sensible defaults for Auth0 users if backend fails
+    localStorage.setItem('primary_role', 'attendee')
+    localStorage.setItem('active_role', 'attendee')
+    localStorage.setItem('roles', JSON.stringify(['attendee']))
+    localStorage.setItem('user_email', 'Auth0 User')
+  }
 }
 
 export function logout(){ 

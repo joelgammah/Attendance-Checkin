@@ -82,7 +82,10 @@ export default function CheckInPage(){
           <div className="flex items-center space-x-1">
             {/* Dashboard Button */}
             <button
-              onClick={() => (window.location.href = '/attendee')}
+              onClick={() => {
+                history.pushState({}, '', '/attendee')
+                window.dispatchEvent(new PopStateEvent('popstate'))
+              }}
               className="px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:text-gray-900 transition-colors duration-200"
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.1)'
@@ -284,8 +287,11 @@ export default function CheckInPage(){
                 </div>
 
                 <div className="space-y-3">
-                  <a
-                    href="/attendee"
+                  <button
+                    onClick={() => {
+                      history.pushState({}, '', '/attendee')
+                      window.dispatchEvent(new PopStateEvent('popstate'))
+                    }}
                     className="inline-flex items-center px-6 py-3 text-white font-medium rounded-lg transition-all duration-200 active:scale-95"
                     style={{backgroundColor: '#95866A'}}
                     onMouseEnter={(e) => {
@@ -300,7 +306,7 @@ export default function CheckInPage(){
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z" />
                     </svg>
                     Go to Dashboard
-                  </a>
+                  </button>
                 </div>
               </div>
             )}
@@ -323,7 +329,10 @@ export default function CheckInPage(){
 
                 <div className="space-y-3">
                   <button
-                    onClick={() => window.location.href = '/checkin/start'}
+                    onClick={() => {
+                      history.pushState({}, '', '/checkin/start')
+                      window.dispatchEvent(new PopStateEvent('popstate'))
+                    }}
                     className="inline-flex items-center px-6 py-3 text-white font-medium rounded-lg transition-all duration-200 active:scale-95"
                     style={{backgroundColor: '#95866A'}}
                     onMouseEnter={(e) => {
@@ -340,12 +349,15 @@ export default function CheckInPage(){
                   </button>
                   
                   <div>
-                    <a
-                      href="/attendee"
-                      className="text-gray-600 hover:text-gray-900 text-sm transition-colors duration-200"
+                    <button
+                      onClick={() => {
+                        history.pushState({}, '', '/attendee')
+                        window.dispatchEvent(new PopStateEvent('popstate'))
+                      }}
+                      className="text-gray-600 hover:text-gray-900 text-sm transition-colors duration-200 bg-transparent border-none cursor-pointer"
                     >
                       Go to Dashboard
-                    </a>
+                    </button>
                   </div>
                 </div>
               </div>

@@ -1,7 +1,9 @@
 import React from 'react'
 import { login } from '../api/auth'
+import { useAuth0 } from '@auth0/auth0-react'
 
 export default function LoginPage(){
+  const { loginWithRedirect, isAuthenticated, isLoading, user, getAccessTokenSilently } = useAuth0()
   const [email, setEmail] = React.useState('grayj@wofford.edu')
   const [password, setPassword] = React.useState('grayj')
   const [error, setError] = React.useState('')
@@ -18,6 +20,24 @@ export default function LoginPage(){
     '/images/ui/login-6.jpg',
   ]
 
+  // Redirect authenticated Auth0 users away from login page
+  React.useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      location.href = '/'
+    } else if (!isLoading && !isAuthenticated) {
+      // Only try to get token once, and don't trigger redirects to avoid infinite loops
+      if (!window.location.search.includes('code=')) {
+        getAccessTokenSilently()
+          .then(() => {
+            // Token retrieved successfully
+          })
+          .catch(() => {
+            // Don't auto-redirect for consent issues - let user manually click the button
+          })
+      }
+    }
+  }, [isAuthenticated, isLoading, user, getAccessTokenSilently])
+
   // Change image every 7 seconds
   React.useEffect(() => {
     const interval = setInterval(() => {
@@ -28,6 +48,18 @@ export default function LoginPage(){
 
     return () => clearInterval(interval) // Cleanup on unmount
   }, [images.length])
+
+  // Show loading while Auth0 is checking authentication status
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
 
   async function onSubmit(e: React.FormEvent){
     e.preventDefault()
@@ -84,6 +116,18 @@ export default function LoginPage(){
 
           {/* Form */}
           <form onSubmit={onSubmit} className="space-y-6">
+            {/* Auth0 button - opens hosted login/signup */}
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={() => loginWithRedirect({ authorizationParams: { audience: import.meta.env.VITE_AUTH0_AUDIENCE } })}
+                className="w-full py-3 px-4 rounded-lg text-white font-medium mb-2"
+                style={{ backgroundColor: '#95866A' }}
+              >
+                Sign in with Wofford Email
+              </button>
+              <div className="text-center text-sm text-gray-500">Use your @wofford.edu email to sign in</div>
+            </div>
             {/* Error Alert */}
             {error && (
               <div className="rounded-lg p-4 flex items-start space-x-3" 

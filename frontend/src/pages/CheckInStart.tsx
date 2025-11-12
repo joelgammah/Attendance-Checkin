@@ -31,8 +31,10 @@ export default function CheckInStart() {
         t = param
       }
 
-      // Redirect to the smooth CheckInPage experience
-      window.location.href = `/checkin/${encodeURIComponent(t)}`
+      // Redirect to the smooth CheckInPage experience  
+      // Use history.pushState to preserve Auth0 authentication state
+      history.pushState({}, '', `/checkin/${encodeURIComponent(t)}`)
+      window.dispatchEvent(new PopStateEvent('popstate'))
     } catch (err: any) {
       setError(err.message || 'Invalid token format')
     } finally {
@@ -73,7 +75,10 @@ export default function CheckInStart() {
         <div className="flex items-center space-x-1">
           {/* Dashboard Button */}
           <button
-            onClick={() => (window.location.href = '/attendee')}
+            onClick={() => {
+              history.pushState({}, '', '/attendee')
+              window.dispatchEvent(new PopStateEvent('popstate'))
+            }}
             className="px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:text-gray-900 transition-colors duration-200"
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.1)'
