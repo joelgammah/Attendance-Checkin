@@ -38,9 +38,7 @@ export async function getUserProfile(): Promise<UserProfile> {
 
 export async function initializeAuth0UserProfile(): Promise<void> {
   try {
-    console.log('DEBUG: Fetching user profile from backend...')
     const profile = await getUserProfile()
-    console.log('DEBUG: Got user profile:', profile)
     
     // Store profile data in localStorage to match legacy flow
     localStorage.setItem('user_email', profile.email)
@@ -48,17 +46,13 @@ export async function initializeAuth0UserProfile(): Promise<void> {
     localStorage.setItem('primary_role', profile.primary_role)
     localStorage.setItem('active_role', profile.primary_role)
     
-    console.log('DEBUG: Stored Auth0 user profile in localStorage')
-    
     // Trigger a storage event to notify components of the update
     window.dispatchEvent(new StorageEvent('storage', {
       key: 'primary_role',
       newValue: profile.primary_role
     }))
   } catch (error: any) {
-    console.error('DEBUG: Failed to fetch user profile:', error?.message || error)
     // Provide sensible defaults for Auth0 users if backend fails
-    console.log('DEBUG: Using fallback defaults for Auth0 user')
     localStorage.setItem('primary_role', 'attendee')
     localStorage.setItem('active_role', 'attendee')
     localStorage.setItem('roles', JSON.stringify(['attendee']))

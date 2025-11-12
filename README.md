@@ -70,6 +70,7 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 
 ### Backend
 ```bash
+source .venv/bin/activate
 cd backend
 python -m pytest -q --cov=app --cov-report=term-missing:skip-covered --cov-report=html --cov-fail-under=80
 ```

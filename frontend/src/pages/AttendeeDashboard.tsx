@@ -15,20 +15,15 @@ export default function AttendeeDashboard() {
   React.useEffect(() => {
     async function loadData() {
       try {
-        console.log('DEBUG: AttendeeDashboard - Starting to load data...')
         // Get user email from localStorage (stored during login)
         const storedEmail = localStorage.getItem('user_email')
         if (storedEmail) {
           setUserEmail(storedEmail)
-          console.log('DEBUG: Found user email in localStorage:', storedEmail)
         } else {
           setUserEmail('Student')
-          console.log('DEBUG: No user email in localStorage, using "Student"')
         }
         // Load check-ins (preview only)
-        console.log('DEBUG: About to call getMyCheckIns()...')
         const data = await getMyCheckIns()
-        console.log('DEBUG: getMyCheckIns() returned:', data)
         setCheckIns(data.slice(0, 5))
         setHasMore(data.length > 5)
       } catch (error) {

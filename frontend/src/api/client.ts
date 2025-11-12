@@ -11,12 +11,10 @@ export function setTokenProvider(fn: (() => Promise<string | null>) | null) {
 export async function fetchJson<T>(path: string, opts: RequestInit = {}): Promise<T> {
   // attempt to obtain token from provider first
   let token: string | null = null
-  let tokenSource = 'none'
   
   if (tokenProvider) {
     try {
       token = await tokenProvider()
-      if (token) tokenSource = 'auth0-provider'
     } catch (_) {
       token = null
     }
@@ -25,10 +23,7 @@ export async function fetchJson<T>(path: string, opts: RequestInit = {}): Promis
   // fallback to localStorage for compatibility
   if (!token) {
     token = localStorage.getItem('token')
-    if (token) tokenSource = 'localStorage'
   }
-
-  console.log(`DEBUG: API call to ${path}, token source: ${tokenSource}`)
 
   const headers: HeadersInit = { 'Content-Type': 'application/json', ...(opts.headers || {}) }
   if (token) (headers as any)['Authorization'] = `Bearer ${token}`

@@ -22,29 +22,18 @@ export default function LoginPage(){
 
   // Redirect authenticated Auth0 users away from login page
   React.useEffect(() => {
-    console.log(`DEBUG: Auth0 state - isAuthenticated: ${isAuthenticated}, isLoading: ${isLoading}, user:`, user)
-    
     if (isAuthenticated && !isLoading) {
-      console.log('Auth0 user authenticated, redirecting to dashboard...')
       location.href = '/'
     } else if (!isLoading && !isAuthenticated) {
-      console.log('DEBUG: Auth0 user not authenticated, staying on login page')
-      
       // Only try to get token once, and don't trigger redirects to avoid infinite loops
       if (!window.location.search.includes('code=')) {
-        console.log('DEBUG: Not a callback URL, checking for existing Auth0 session...')
         getAccessTokenSilently()
-          .then(token => {
-            if (token) {
-              console.log('DEBUG: Got Auth0 token, user should be authenticated soon...')
-            }
+          .then(() => {
+            // Token retrieved successfully
           })
-          .catch(e => {
-            console.log('DEBUG: No Auth0 token available:', e.message)
+          .catch(() => {
             // Don't auto-redirect for consent issues - let user manually click the button
           })
-      } else {
-        console.log('DEBUG: This is a callback URL, waiting for Auth0 to process...')
       }
     }
   }, [isAuthenticated, isLoading, user, getAccessTokenSilently])

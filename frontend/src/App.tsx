@@ -47,15 +47,10 @@ function ProtectedDashboard() {
   const [, forceUpdate] = React.useReducer(x => x + 1, 0)
   const role = getActiveRole()
   
-  console.log('DEBUG: ProtectedDashboard - role:', role)
-  console.log('DEBUG: localStorage active_role:', localStorage.getItem('active_role'))
-  console.log('DEBUG: localStorage primary_role:', localStorage.getItem('primary_role'))
-  
   // Listen for localStorage changes (when Auth0 profile is fetched)
   React.useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'primary_role' || e.key === 'active_role') {
-        console.log('DEBUG: Role data updated in localStorage, forcing re-render')
         forceUpdate()
       }
     }
@@ -66,7 +61,6 @@ function ProtectedDashboard() {
   
   // If no role yet, show loading instead of wrong dashboard
   if (!role) {
-    console.log('DEBUG: No role yet, showing loading...')
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -79,15 +73,12 @@ function ProtectedDashboard() {
   
   // Route based on user role (uses active role which can be switched)
   if (role === 'attendee') {
-    console.log('DEBUG: Rendering AttendeeDashboard')
     return <AttendeeDashboard />
   } else if (role === 'organizer') {
-    console.log('DEBUG: Rendering DashboardPage')
     return <DashboardPage />
   }
   else {
     // admin
-    console.log('DEBUG: Rendering AdminDashboardPage (admin role)')
     return <AdminDashboardPage />
   }
 }

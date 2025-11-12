@@ -14,7 +14,6 @@ export function useAuth(){
   
   // Update when Auth0 loading state changes - trust Auth0 authentication
   React.useEffect(()=>{
-    console.log('DEBUG: useAuth() - Auth0 state:', { isAuthenticated, isLoading, hasLocalToken: !!localStorage.getItem('token') })
     // If Auth0 is authenticated OR we have a localStorage token, consider user authenticated
     setAuthed(isAuthenticated || !!localStorage.getItem('token'))
   },[isAuthenticated, isLoading])

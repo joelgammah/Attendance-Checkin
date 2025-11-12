@@ -34,27 +34,22 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(reuse_o
                 try:
                     jwks = requests.get(jwks_url, timeout=5).json()
                 except Exception:
-                    print("DEBUG: Failed to fetch JWKS, falling back to HS256")
                     raise ValueError("JWKS fetch failed")
 
                 try:
                     unverified_header = jwt.get_unverified_header(token)
                 except Exception as e:
-                    print(f"DEBUG: Invalid token header, falling back to HS256: {e}")
                     raise ValueError("Invalid token header")
 
                 kid = unverified_header.get("kid")
-                print(f"DEBUG: Looking for kid: {kid}")
                 
                 # If kid is None, this is likely an HS256 token, fall back immediately
                 if kid is None:
-                    print("DEBUG: Token has no kid, falling back to HS256")
                     raise ValueError("No kid in token")
                 
                 rsa_key = None
                 for key in jwks.get("keys", []):
                     if key.get("kid") == kid:
-                        print(f"DEBUG: Found matching key with kid: {kid}")
                         # build a PEM public key from the JWK
                         jwk_json = json.dumps(key)
                         try:
@@ -65,7 +60,6 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(reuse_o
                         break
 
                 if not rsa_key:
-                    print(f"DEBUG: No matching key found for kid: {kid}, falling back to HS256")
                     raise ValueError("No matching JWK")
 
                 issuer = f"https://{settings.AUTH0_DOMAIN}/"
@@ -84,10 +78,8 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(reuse_o
                     
                     if actual_email:
                         email = actual_email
-                        print(f"DEBUG: Auth0 token validation successful, email: {email}, name: {actual_name}, auth0_sub: {auth0_sub}")
                     else:
                         email = auth0_sub
-                        print(f"DEBUG: Auth0 token validation successful, no email claim, using sub: {email}, name: {actual_name}")
                     
                     # NOTE: Access tokens from Auth0 often don't include profile claims like
                     # `email_verified`. Verifying email via the Management API or including
@@ -96,7 +88,6 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(reuse_o
                     # (or subject) be present in the token; do not mandate `email_verified`
                     # here because many access tokens won't contain it.
                 except Exception as e:
-                    print(f"DEBUG: Auth0 token decode failed, falling back to HS256: {e}")
                     raise ValueError("Auth0 token decode failed")
                     
                 if not email:
@@ -104,7 +95,6 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(reuse_o
                     
             except ValueError:
                 # Auth0 validation failed, fall back to HS256
-                print("DEBUG: Using fallback HS256 validation")
                 try:
                     payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
                     email: str = payload.get("sub")
@@ -112,7 +102,6 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(reuse_o
                     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
         else:
             # No Auth0 configured, use HS256 only
-            print("DEBUG: Using HS256 validation (no Auth0 configured)")
             try:
                 payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
                 email: str = payload.get("sub")
@@ -141,7 +130,6 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(reuse_o
             else:
                 display_name = email[:20]  # Truncate long IDs
         
-        print(f"DEBUG: Creating new user - email: {email}, display_name: {display_name}, auth0_sub: {auth0_sub}")
         user = UserRepository().create(
             db, 
             email=email, 
@@ -155,7 +143,6 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(reuse_o
     else:
         # Check if this is an existing Auth0 user that needs updating
         if user.email.startswith("auth0|") and actual_email and "@" in actual_email:
-            print(f"DEBUG: Updating existing Auth0 user {user.email} with real email {actual_email}")
             # Update to use real email and actual name from Auth0
             user.email = actual_email
             if 'actual_name' in locals() and actual_name:
@@ -167,7 +154,6 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(reuse_o
                 user.auth0_sub = auth0_sub
             db.commit()
             db.refresh(user)
-            print(f"DEBUG: Updated user - new email: {user.email}, new name: {user.name}, auth0_sub: {user.auth0_sub}")
         elif user.email.startswith("auth0|") and user.name.startswith("auth0|"):
             # Improve the display name even if we don't have real email
             if user.email.startswith("auth0|"):
@@ -181,7 +167,6 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(reuse_o
                     user.auth0_sub = auth0_sub
                 db.commit()
                 db.refresh(user)
-                print(f"DEBUG: Updated Auth0 user display name: {user.name}, auth0_sub: {user.auth0_sub}")
         elif 'auth0_sub' in locals() and not user.auth0_sub:
             # For any Auth0 user missing auth0_sub, add it (and update name if available)
             user.auth0_sub = auth0_sub
@@ -189,7 +174,6 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(reuse_o
                 user.name = actual_name
             db.commit()
             db.refresh(user)
-            print(f"DEBUG: Added auth0_sub to existing user: {user.email}")
 
     return user
 
