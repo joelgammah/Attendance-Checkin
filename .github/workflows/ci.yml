@@ -35,12 +35,14 @@ jobs:
           python -m pip install -U pip
           echo "=== editable install ==="
           pip install -e .
-          echo "=== ensure pytest ==="
-          pip install -U pytest pytest-cov
-          echo "=== verify pytest import ==="
-          python -c "import pytest, sys; print('pytest version:', pytest.__version__); print('sys.executable:', sys.executable)"
-          echo "=== pip list grep pytest ==="
-          python -m pip list | grep -i pytest || { echo 'pytest missing'; exit 1; }
+          echo "=== test deps ==="
+          pip install -U pytest pytest-cov httpx
+          echo "=== verify pytest/httpx ==="
+          python - <<'PY'
+          import pytest, httpx, sys
+          print('pytest:', pytest.__version__, 'httpx:', httpx.__version__)
+          print('python:', sys.executable)
+          PY
 
       - name: Debug Python path
         run: python -c "import sys, site; print(sys.executable); print('PATH:', sys.path); print('site-packages:', site.getsitepackages())"
