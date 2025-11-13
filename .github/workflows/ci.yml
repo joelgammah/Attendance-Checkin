@@ -31,14 +31,22 @@ jobs:
         shell: bash
         run: |
           set -e
+          echo "=== pip bootstrap ==="
           python -m pip install -U pip
-          pip install -e ".[dev]"
-          pip install "requests>=2.31.0"
-          pip install -U pytest
+          echo "=== editable install ==="
+          pip install -e .
+          echo "=== ensure pytest ==="
+          pip install -U pytest pytest-cov
+          echo "=== verify pytest import ==="
+          python -c "import pytest, sys; print('pytest version:', pytest.__version__); print('sys.executable:', sys.executable)"
+          echo "=== pip list grep pytest ==="
+          python -m pip list | grep -i pytest || { echo 'pytest missing'; exit 1; }
+
+      - name: Debug Python path
+        run: python -c "import sys, site; print(sys.executable); print('PATH:', sys.path); print('site-packages:', site.getsitepackages())"
 
       - name: Run tests (pytest with coverage gate)
         run: python -m pytest -q
-        # coverage threshold enforced by addopts in pyproject.toml
 
       - name: Upload coverage (backend htmlcov)
         if: always()
@@ -56,11 +64,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Show package.json manager
+        run: grep -i packageManager package.json || echo "No packageManager field"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           run_install: false
           package_json_file: frontend/package.json
+          # Ensure there is NO 'version:' key here
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -68,7 +80,12 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
-          
+
+      - name: pnpm version check
+        run: |
+          pnpm -v
+          node -v
+
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
