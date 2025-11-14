@@ -44,6 +44,22 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 	```
 	Visit http://localhost:5173
 
+## Windows First Run (Powershell)
+- Backend:
+	py -3.11 -m venv .venv   |  use what python version you have
+	.\.venv\Scripts\Activate.ps1
+	cd backend\
+	python -m pip install -e '.[dev]'
+	uvicorn app.main:app --reload
+	```
+	Visit http://localhost:8000/docs
+- Frontend:
+	cd frontend\
+	corepack enable && corepack prepare pnpm@9.7.0 --activate
+	pnpm install
+	pnpm dev
+	```
+	Visit http://localhost:5173
 
 ### Daily Local Run
 - Backend:
@@ -82,6 +98,22 @@ cd frontend
 pnpm test:cov
 ```
 Coverage report in `frontend/coverage/index.html`.
+
+## Windows (Powershell) Test
+
+- Backend:
+	py -3.11 -m venv .venv   |  use what python version you have
+	.\.venv\Scripts\Activate.ps1
+	cd backend\
+	python -m pip install -e '.[dev]'
+	python -m pytest -q --cov=app --cov-report=term-missing:skip-covered --cov-report=html --cov-fail-under=80
+
+- Frotend:
+	py -3.11 -m venv .venv   |  use what python version you have
+	.\.venv\Scripts\Activate.ps1
+	cd frontend\
+	pnpm test:cov
+
 
 ## Database
 

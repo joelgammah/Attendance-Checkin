@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   backend:
-    name: backend (python 3.11)
+    name: backend (python 3.13)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -23,7 +23,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
           cache: 'pip'
           cache-dependency-path: backend/pyproject.toml
 
