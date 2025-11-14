@@ -55,7 +55,6 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 	Visit http://localhost:8000/docs
 - Frontend:
 	cd frontend\
-	corepack enable && corepack prepare pnpm@9.7.0 --activate
 	pnpm install
 	pnpm dev
 	```

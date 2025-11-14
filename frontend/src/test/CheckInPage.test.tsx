@@ -31,6 +31,22 @@ const mockGetByToken = getByToken as any
 
 import CheckInPage from '../pages/CheckInPage'
 
+// Add navigation mocks so href assertions work with pushState
+const mockPushState = vi.fn((state?: any, _: string = '', url?: string | URL) => {
+  if (typeof url === 'string') {
+    // Keep existing test that checks window.location.href working
+    (window as any).location.href = url
+  } else if (url instanceof URL) {
+    (window as any).location.href = url.toString()
+  }
+})
+Object.defineProperty(window.history, 'pushState', {
+  value: mockPushState,
+  writable: true
+})
+const mockDispatchEvent = vi.fn()
+window.dispatchEvent = mockDispatchEvent
+
 describe('CheckInPage Improved Coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -155,7 +171,10 @@ describe('CheckInPage Improved Coverage', () => {
     await waitFor(() => {
       const tryAgainButton = screen.getByText('Try Again')
       fireEvent.click(tryAgainButton)
+      // Works because we mock pushState to update location.href
       expect(window.location.href).toBe('/checkin/start')
+      expect(mockPushState).toHaveBeenCalledWith({}, '', '/checkin/start')
+      expect(mockDispatchEvent).toHaveBeenCalled()
     })
   })
 
@@ -166,8 +185,16 @@ describe('CheckInPage Improved Coverage', () => {
     render(<CheckInPage />)
     
     await waitFor(() => {
-      const dashboardLink = screen.getByText('Go to Dashboard').closest('a')
-      expect(dashboardLink).toHaveAttribute('href', '/attendee')
+      const target = screen.getByText('Go to Dashboard')
+      const dashboardLink = target.closest('a')
+      if (dashboardLink) {
+        expect(dashboardLink).toHaveAttribute('href', '/attendee')
+      } else {
+        // It’s a button in this UI; validate navigation behavior instead
+        fireEvent.click(target)
+        expect(mockPushState).toHaveBeenCalledWith({}, '', '/attendee')
+        expect(mockDispatchEvent).toHaveBeenCalled()
+      }
     })
   })
 
