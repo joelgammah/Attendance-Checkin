@@ -22,9 +22,30 @@ Object.defineProperty(window, 'location', {
 })
 
 import { createEvent } from '../api/events'
-const mockCreateEvent = createEvent as jest.MockedFunction<typeof createEvent>
+const mockCreateEvent = createEvent as unknown as ReturnType<typeof vi.fn>
 
 describe('EventFormPage', () => {
+  // Force a stable timezone for payload assertions
+  let dtfSpy: any
+
+  beforeAll(() => {
+    const OriginalDTF = Intl.DateTimeFormat
+    dtfSpy = vi.spyOn(Intl, 'DateTimeFormat').mockImplementation((...args: any[]) => {
+      const formatter = new (OriginalDTF as any)(...args)
+      return {
+        ...formatter,
+        resolvedOptions: () => ({
+          ...(formatter.resolvedOptions ? formatter.resolvedOptions() : {}),
+          timeZone: 'America/New_York'
+        })
+      } as any
+    })
+  })
+
+  afterAll(() => {
+    dtfSpy?.mockRestore()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     window.location.href = ''
