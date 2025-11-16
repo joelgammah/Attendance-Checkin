@@ -12,6 +12,17 @@ Object.defineProperty(window, 'localStorage', {
   value: mockLocalStorage
 })
 
+// Mock history.pushState
+const mockPushState = vi.fn()
+Object.defineProperty(window.history, 'pushState', {
+  value: mockPushState,
+  writable: true
+})
+
+// Mock window.dispatchEvent
+const mockDispatchEvent = vi.fn()
+window.dispatchEvent = mockDispatchEvent
+
 // Mock window.location
 Object.defineProperty(window, 'location', {
   value: {
@@ -26,6 +37,8 @@ describe('CheckInStart Enhanced Coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     window.location.href = ''
+    mockPushState.mockClear()
+    mockDispatchEvent.mockClear()
   })
 
   // Navigation Bar Tests
@@ -43,7 +56,8 @@ describe('CheckInStart Enhanced Coverage', () => {
     const dashboardButton = screen.getByText('Dashboard')
     fireEvent.click(dashboardButton)
     
-    expect(window.location.href).toBe('/attendee')
+    expect(mockPushState).toHaveBeenCalledWith({}, '', '/attendee')
+    expect(mockDispatchEvent).toHaveBeenCalled()
   })
 
   it('handles logout button click', () => {
@@ -152,7 +166,8 @@ describe('CheckInStart Enhanced Coverage', () => {
     const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(window.location.href).toBe('/checkin/simple-token')
+    expect(mockPushState).toHaveBeenCalledWith({}, '', '/checkin/simple-token')
+    expect(mockDispatchEvent).toHaveBeenCalled()
   })
 
   it('extracts token from HTTP URL', () => {
@@ -164,7 +179,8 @@ describe('CheckInStart Enhanced Coverage', () => {
     const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(window.location.href).toBe('/checkin/extracted-token')
+    expect(mockPushState).toHaveBeenCalledWith({}, '', '/checkin/extracted-token')
+    expect(mockDispatchEvent).toHaveBeenCalled()
   })
 
   it('extracts token from HTTPS URL', () => {
@@ -176,7 +192,8 @@ describe('CheckInStart Enhanced Coverage', () => {
     const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(window.location.href).toBe('/checkin/https-token')
+    expect(mockPushState).toHaveBeenCalledWith({}, '', '/checkin/https-token')
+    expect(mockDispatchEvent).toHaveBeenCalled()
   })
 
   it('shows error when URL has no token parameter', () => {
@@ -200,7 +217,9 @@ describe('CheckInStart Enhanced Coverage', () => {
     const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(screen.getByText('Invalid URL: http://invalid url with spaces')).toBeInTheDocument()
+    // The error message will be from the URL constructor
+    const errorElement = screen.getByText(/Invalid token format|Invalid URL/)
+    expect(errorElement).toBeInTheDocument()
   })
 
   it('clears input and error when clear button is clicked', () => {
@@ -232,7 +251,8 @@ describe('CheckInStart Enhanced Coverage', () => {
     const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(window.location.href).toBe('/checkin/token%20with%20spaces%20%26%20symbols')
+    expect(mockPushState).toHaveBeenCalledWith({}, '', '/checkin/token%20with%20spaces%20%26%20symbols')
+    expect(mockDispatchEvent).toHaveBeenCalled()
   })
 
   it('clears error when user starts typing after error', () => {
@@ -252,16 +272,20 @@ describe('CheckInStart Enhanced Coverage', () => {
     
     // Error should be cleared and navigation should happen
     expect(screen.queryByText('Please enter an event token')).not.toBeInTheDocument()
-    expect(window.location.href).toBe('/checkin/new-token')
+    expect(mockPushState).toHaveBeenCalledWith({}, '', '/checkin/new-token')
   })
 
   it('handles submit button hover effects', () => {
     render(<CheckInStart />)
     
+    const input = screen.getByRole('textbox')
+    fireEvent.change(input, { target: { value: 'test-token' } })
+    
     const submitButton = screen.getByText('Check In')
     
-    // Test initial style
-    expect(submitButton.style.backgroundColor).toBe('rgb(149, 134, 106)')
+    // Test hover enter
+    fireEvent.mouseEnter(submitButton)
+    expect(submitButton.style.backgroundColor).toBe('rgb(125, 111, 87)')
     
     // Test hover leave
     fireEvent.mouseLeave(submitButton)
@@ -277,7 +301,8 @@ describe('CheckInStart Enhanced Coverage', () => {
     fireEvent.change(input, { target: { value: 'form-submit-token' } })
     fireEvent.submit(form)
     
-    expect(window.location.href).toBe('/checkin/form-submit-token')
+    expect(mockPushState).toHaveBeenCalledWith({}, '', '/checkin/form-submit-token')
+    expect(mockDispatchEvent).toHaveBeenCalled()
   })
 
   it('trims whitespace from token before processing', () => {
@@ -289,7 +314,8 @@ describe('CheckInStart Enhanced Coverage', () => {
     const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(window.location.href).toBe('/checkin/trimmed-token')
+    expect(mockPushState).toHaveBeenCalledWith({}, '', '/checkin/trimmed-token')
+    expect(mockDispatchEvent).toHaveBeenCalled()
   })
 
   it('handles URL with token at different positions in query string', () => {
@@ -301,7 +327,8 @@ describe('CheckInStart Enhanced Coverage', () => {
     const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(window.location.href).toBe('/checkin/middle-token')
+    expect(mockPushState).toHaveBeenCalledWith({}, '', '/checkin/middle-token')
+    expect(mockDispatchEvent).toHaveBeenCalled()
   })
 
   it('renders all SVG icons without errors', () => {

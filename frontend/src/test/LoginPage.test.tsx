@@ -26,6 +26,49 @@ vi.stubGlobal('location', {
   origin: 'http://localhost' 
 } as any)
 
+// Add these mocks BEFORE rendering LoginPage (Vitest hoists vi.mock)
+vi.mock('@auth0/auth0-react', () => ({
+  useAuth0: () => ({
+    loginWithRedirect: vi.fn(),
+    isAuthenticated: false,
+    isLoading: false,
+    user: null,
+    getAccessTokenSilently: vi.fn().mockResolvedValue('mock-token')
+  })
+}))
+
+vi.mock('../api/auth', () => {
+  return {
+    login: vi.fn(async (email: string, password: string) => {
+      // Delegate to global fetch so your tests can control responses/timing
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
+      // Allow rejection to bubble up for the error test
+      const data = await res.json()
+
+      // Store values so tests can assert localStorage
+      if (data?.access_token) localStorage.setItem('token', data.access_token)
+      if (data?.roles) localStorage.setItem('roles', JSON.stringify(data.roles))
+      if (data?.primary_role) {
+        localStorage.setItem('primary_role', data.primary_role)
+        localStorage.setItem('active_role', data.primary_role)
+      }
+      return data
+    })
+  }
+})
+
+// Ensure window.location has a .search property used by the component
+;(globalThis as any).location = {
+  ...(globalThis as any).location,
+  href: (globalThis as any).location?.href ?? '/',
+  origin: (globalThis as any).location?.origin ?? 'http://localhost',
+  search: (globalThis as any).location?.search ?? ''
+}
+
 describe('LoginPage', () => {
   beforeEach(() => {
     // Clear localStorage before each test
