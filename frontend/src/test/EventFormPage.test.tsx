@@ -21,6 +21,13 @@ Object.defineProperty(window, 'location', {
   writable: true
 })
 
+// Mock history.pushState so tests can assert navigation
+const mockPushState = vi.fn()
+Object.defineProperty(window, 'history', {
+  value: { pushState: mockPushState },
+  writable: true
+})
+
 import { createEvent } from '../api/events'
 const mockCreateEvent = createEvent as unknown as ReturnType<typeof vi.fn>
 
@@ -149,7 +156,7 @@ describe('EventFormPage', () => {
     })
     
     await waitFor(() => {
-      expect(window.location.href).toBe('/events/test-token-123')
+      expect(mockPushState).toHaveBeenCalledWith({}, '', '/events/test-token-123')
     })
   })
 

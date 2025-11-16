@@ -14,8 +14,11 @@ export async function fetchJson<T>(path: string, opts: RequestInit = {}): Promis
   
   if (tokenProvider) {
     try {
+      console.debug('[client] tokenProvider present, calling tokenProvider()')
       token = await tokenProvider()
-    } catch (_) {
+      console.debug('[client] tokenProvider returned', token ? `${token.slice(0,8)}...` : null)
+    } catch (err) {
+      console.debug('[client] tokenProvider threw error', err)
       token = null
     }
   }
@@ -28,10 +31,14 @@ export async function fetchJson<T>(path: string, opts: RequestInit = {}): Promis
   const headers: HeadersInit = { 'Content-Type': 'application/json', ...(opts.headers || {}) }
   if (token) (headers as any)['Authorization'] = `Bearer ${token}`
 
+  console.debug('[client] fetch', `${BASE}${path}`, { method: opts.method || 'GET', headers })
   const res = await fetch(`${BASE}${path}`, { ...opts, headers })
+  console.debug('[client] response', res.status, res.statusText)
   if (!res.ok) {
     const msg = await res.text()
+    console.debug('[client] response body on error:', msg)
     throw new Error(msg || res.statusText)
   }
-  return res.headers.get('content-type')?.includes('application/json') ? res.json() : (await res.text() as any)
+  const contentType = res.headers.get('content-type') || ''
+  return contentType.includes('application/json') ? res.json() : (await res.text() as any)
 }

@@ -33,11 +33,15 @@ export interface UserProfile {
 }
 
 export async function getUserProfile(): Promise<UserProfile> {
-  return fetchJson<UserProfile>('/v1/users/me')
+  console.debug('[auth] getUserProfile: calling /v1/users/me, stored token present?', !!localStorage.getItem('token'))
+  const profile = await fetchJson<UserProfile>('/v1/users/me')
+  console.debug('[auth] getUserProfile: success', profile?.email)
+  return profile
 }
 
 export async function initializeAuth0UserProfile(): Promise<void> {
   try {
+    console.debug('[auth] initializeAuth0UserProfile: starting, token in storage:', localStorage.getItem('token') ? `${localStorage.getItem('token')?.slice(0,8)}...` : null)
     const profile = await getUserProfile()
     
     // Store profile data in localStorage to match legacy flow
@@ -52,6 +56,7 @@ export async function initializeAuth0UserProfile(): Promise<void> {
       newValue: profile.primary_role
     }))
   } catch (error: any) {
+    console.error('[auth] initializeAuth0UserProfile failed:', error)
     // Provide sensible defaults for Auth0 users if backend fails
     localStorage.setItem('primary_role', 'attendee')
     localStorage.setItem('active_role', 'attendee')

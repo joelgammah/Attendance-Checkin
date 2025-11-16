@@ -23,17 +23,15 @@ export default function LoginPage(){
   // Redirect authenticated Auth0 users away from login page
   React.useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      location.href = '/'
+      // FIX: Use pushState instead of location.href to preserve Auth0 state
+      history.pushState({}, '', '/')
+      window.dispatchEvent(new PopStateEvent('popstate'))
     } else if (!isLoading && !isAuthenticated) {
       // Only try to get token once, and don't trigger redirects to avoid infinite loops
       if (!window.location.search.includes('code=')) {
-        getAccessTokenSilently()
-          .then(() => {
-            // Token retrieved successfully
-          })
-          .catch(() => {
-            // Don't auto-redirect for consent issues - let user manually click the button
-          })
+        getAccessTokenSilently().catch(() => {
+          // Silent token retrieval failed, user needs to log in
+        })
       }
     }
   }, [isAuthenticated, isLoading, user, getAccessTokenSilently])
@@ -72,15 +70,12 @@ export default function LoginPage(){
       // Store email for later use
       localStorage.setItem('user_email', email)
       
-      // Role-based routing
+      // Role-based routing - FIX: Use pushState instead of location.href
       const effectiveRole = loginData.primary_role
-      if (effectiveRole === 'attendee') {
-        location.href = '/'  // Attendees go to their dashboard
-      } else if (effectiveRole === 'organizer' || effectiveRole === 'admin') {
-        location.href = '/'  // Organizers/admins go to main dashboard
-      } else {
-        location.href = '/'  // Default fallback
-      }
+      
+      // Use pushState to preserve Auth0 state (even though this is demo login)
+      history.pushState({}, '', '/')
+      window.dispatchEvent(new PopStateEvent('popstate'))
     } catch(err: any) {
       let errorMessage = 'Login failed'
 
@@ -120,7 +115,9 @@ export default function LoginPage(){
             <div className="mb-4">
               <button
                 type="button"
-                onClick={() => loginWithRedirect({ authorizationParams: { audience: import.meta.env.VITE_AUTH0_AUDIENCE } })}
+                onClick={() => {
+                  loginWithRedirect({ authorizationParams: { audience: import.meta.env.VITE_AUTH0_AUDIENCE } })
+                }}
                 className="w-full py-3 px-4 rounded-lg text-white font-medium mb-2"
                 style={{ backgroundColor: '#95866A' }}
               >

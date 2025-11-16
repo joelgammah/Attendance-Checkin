@@ -23,6 +23,17 @@ event_repo = EventRepository()
 att_repo = AttendanceRepository()
 
 
+def serialize_datetime(dt: datetime) -> str:
+    """Convert timezone-aware datetime to UTC ISO string with 'Z' suffix"""
+    if dt.tzinfo is not None:
+        # Convert to UTC and remove timezone info, then add 'Z'
+        dt_utc = dt.astimezone(timezone.utc)
+        return dt_utc.replace(tzinfo=None).isoformat() + 'Z'
+    else:
+        # Naive datetime, assume UTC
+        return dt.isoformat() + 'Z'
+
+
 class EventCreate(BaseModel):
     name: str
     location: str
@@ -181,15 +192,15 @@ def create_event(
             id=parent_event.id,
             name=parent_event.name,
             location=parent_event.location,
-            start_time=start_utc.isoformat() + "Z",
-            end_time=end_utc.isoformat() + "Z",
+            start_time=serialize_datetime(start_utc),
+            end_time=serialize_datetime(end_utc),
             notes=parent_event.notes,
             checkin_open_minutes=parent_event.checkin_open_minutes,
             checkin_token=parent_event.checkin_token,
             attendance_count=0,
             recurring=parent_event.recurring,
             weekdays=parent_event.weekdays,
-            end_date=parent_event.end_date.isoformat() + "Z" if parent_event.end_date else None,
+            end_date=serialize_datetime(parent_event.end_date) if parent_event.end_date else None,
             parent_id=parent_event.parent_id
         )
 
@@ -213,15 +224,15 @@ def list_all_events(db: Session = Depends(get_db), admin: User = Depends(require
             id=e.id,
             name=e.name,
             location=e.location,
-            start_time=e.start_time.isoformat() + "Z",
-            end_time=e.end_time.isoformat() + "Z",
+            start_time=serialize_datetime(e.start_time),
+            end_time=serialize_datetime(e.end_time),
             notes=e.notes,
             checkin_open_minutes=e.checkin_open_minutes,
             checkin_token=e.checkin_token,
             attendance_count=attendance_count,
             recurring=e.recurring,
             weekdays=e.weekdays,
-            end_date=e.end_date.isoformat() + "Z" if e.end_date else None,
+            end_date=serialize_datetime(e.end_date) if e.end_date else None,
             parent_id=e.parent_id,
             organizer_name=organizer_name
         ))
@@ -234,15 +245,15 @@ def my_upcoming(db: Session = Depends(get_db), user = Depends(get_current_user))
         id=e.id,
         name=e.name,
         location=e.location,
-        start_time=e.start_time.isoformat() + "Z",
-        end_time=e.end_time.isoformat() + "Z",
+        start_time=serialize_datetime(e.start_time),
+        end_time=serialize_datetime(e.end_time),
         notes=e.notes,
         checkin_open_minutes=e.checkin_open_minutes,
         checkin_token=e.checkin_token,
         attendance_count=att_repo.count_for_event(db, e.id),
         recurring=e.recurring,
         weekdays=e.weekdays,
-        end_date=e.end_date.isoformat() + "Z" if e.end_date else None,
+        end_date=serialize_datetime(e.end_date) if e.end_date else None,
         parent_id=e.parent_id
     ) for e in items]
 
@@ -254,15 +265,15 @@ def my_past(db: Session = Depends(get_db), user = Depends(get_current_user)):
         id=e.id,
         name=e.name,
         location=e.location,
-        start_time=e.start_time.isoformat() + "Z",
-        end_time=e.end_time.isoformat() + "Z",
+        start_time=serialize_datetime(e.start_time),
+        end_time=serialize_datetime(e.end_time),
         notes=e.notes,
         checkin_open_minutes=e.checkin_open_minutes,
         checkin_token=e.checkin_token,
         attendance_count=att_repo.count_for_event(db, e.id),
         recurring=e.recurring,
         weekdays=e.weekdays,
-        end_date=e.end_date.isoformat() + "Z" if e.end_date else None,
+        end_date=serialize_datetime(e.end_date) if e.end_date else None,
         parent_id=e.parent_id
     ) for e in items]
 
@@ -312,10 +323,10 @@ def my_checkins(db: Session = Depends(get_db), user = Depends(get_current_user))
         MyCheckInOut(
             id=att.id,
             event_id=att.event_id,
-            checked_in_at=att.checked_in_at.isoformat() + "Z",
+            checked_in_at=serialize_datetime(att.checked_in_at),
             event_name=att.event.name,
             event_location=att.event.location,
-            event_start_time=att.event.start_time.isoformat() + "Z"
+            event_start_time=serialize_datetime(att.event.start_time)
         ) for att in checkins
     ]
 
@@ -450,15 +461,15 @@ def get_by_token(token: str, db: Session = Depends(get_db), user = Depends(get_c
         id=e.id,
         name=e.name,
         location=e.location,
-        start_time=e.start_time.isoformat() + "Z",
-        end_time=e.end_time.isoformat() + "Z",
+        start_time=serialize_datetime(e.start_time),
+        end_time=serialize_datetime(e.end_time),
         notes=e.notes,
         checkin_open_minutes=e.checkin_open_minutes,
         checkin_token=e.checkin_token,
         attendance_count=count,
         recurring=e.recurring,
         weekdays=e.weekdays,
-        end_date=e.end_date.isoformat() + "Z" if e.end_date else None,
+        end_date=serialize_datetime(e.end_date) if e.end_date else None,
         parent_id=e.parent_id
     )
 
@@ -483,15 +494,15 @@ def get_event_by_id(event_id: int, db: Session = Depends(get_db), user: User = D
         id=event.id,
         name=event.name,
         location=event.location,
-        start_time=event.start_time.isoformat() + "Z",
-        end_time=event.end_time.isoformat() + "Z",
+        start_time=serialize_datetime(event.start_time),
+        end_time=serialize_datetime(event.end_time),
         notes=event.notes,
         checkin_open_minutes=event.checkin_open_minutes,
         checkin_token=event.checkin_token,
         attendance_count=count,
         recurring=event.recurring,
         weekdays=event.weekdays,
-        end_date=event.end_date.isoformat() + "Z" if event.end_date else None,
+        end_date=serialize_datetime(event.end_date) if event.end_date else None,
         parent_id=event.parent_id
     )
 
@@ -526,7 +537,7 @@ def get_event_attendees(event_id: int, db: Session = Depends(get_db), user: User
             attendee_id=att.attendee_id,
             attendee_name=usr.name,
             attendee_email=usr.email,
-            checked_in_at=att.checked_in_at.isoformat() + "Z"
+            checked_in_at=serialize_datetime(att.checked_in_at)
         ) for att, usr in records
     ]
 

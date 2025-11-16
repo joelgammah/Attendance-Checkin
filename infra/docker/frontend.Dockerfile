@@ -17,8 +17,11 @@ RUN apk add --no-cache \
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=${VITE_API_URL}
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/vite.config.ts frontend/tsconfig.json frontend/postcss.config.cjs /app/
+# Copy Docker-specific .env file for Auth0 configuration
+COPY frontend/.env.docker /app/.env
 COPY frontend/index.html /app/index.html
 COPY frontend/src /app/src
+COPY frontend/public /app/public
 RUN corepack enable && corepack prepare pnpm@9.7.0 --activate && pnpm install && pnpm build
 
 # ---- serve ----
