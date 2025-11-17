@@ -3,8 +3,10 @@ import { Link } from '../components/Protected'
 import { getMyCheckIns, MyCheckIn } from '../api/attendance'
 import { logout } from '../api/auth'
 import RoleSwitch from '../components/RoleSwitch'
+import { useAuth0 } from '@auth0/auth0-react'
 
 export default function AttendeeDashboard() {
+  const { isAuthenticated, logout: auth0Logout } = useAuth0()
   const [checkIns, setCheckIns] = React.useState<MyCheckIn[]>([])
   const [allCheckIns, setAllCheckIns] = React.useState<MyCheckIn[] | null>(null)
   const [loading, setLoading] = React.useState(true)
@@ -122,7 +124,25 @@ export default function AttendeeDashboard() {
 
           {/* Logout Button */}
           <button 
-            onClick={() => { logout(); location.href = '/login' }} 
+            onClick={() => { 
+              // If Auth0 user, clear ALL localStorage before Auth0 logout
+              if (isAuthenticated) {
+                // Clear ALL localStorage (including our custom keys AND Auth0's cache)
+                // This prevents any stale data from being restored after Auth0 redirect
+                localStorage.clear()
+                
+                // Now call Auth0 logout which will redirect through Auth0
+                auth0Logout({
+                  logoutParams: {
+                    returnTo: window.location.origin
+                  }
+                })
+              } else {
+                // Demo account - clear localStorage and navigate to login
+                logout()
+                location.href = '/login'
+              }
+            }} 
             className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200 active:scale-95"
             style={{backgroundColor: '#95866A'}}
             onMouseEnter={(e) => {

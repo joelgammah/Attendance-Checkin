@@ -11,17 +11,15 @@ COPY backend/alembic /app/alembic
 FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 \
     PORT=8000 \
-    DATABASE_URL=sqlite:////data/app.db \
     PYTHONPATH=/app
 WORKDIR /app
 COPY --from=builder /usr/local /usr/local
 COPY backend /app
-# Install gosu to drop privileges, create non-root user, and prepare /data
+# Install gosu to drop privileges and create non-root user
 RUN apt-get update \
     && apt-get install -y --no-install-recommends gosu ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m -u 1000 -s /bin/bash appuser \
-    && mkdir -p /data \
     && chown -R appuser:appuser /app
 
 COPY infra/docker/backend-entrypoint.sh /entrypoint.sh

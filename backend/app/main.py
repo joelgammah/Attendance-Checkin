@@ -28,32 +28,38 @@ def healthz():
     return {"status": "ok"}
 
 
-# Create tables & seed a few test users on startup (idempotent for SQLite)
+# Seed demo users on startup (idempotent)
+# Note: Tables should be created via Alembic migrations (alembic upgrade head)
 @app.on_event("startup")
 def on_startup():
-    Base.metadata.create_all(bind=engine)
-    with Session(bind=engine) as db:
-        if not db.query(User).count():
-            # Seed with tuple of (email, name, roles_list)
-            demo = [
-                ("grayj@wofford.edu", "John Gray", [UserRole.ORGANIZER]),
-                ("clublead@wofford.edu", "Club Lead", [UserRole.ORGANIZER]),
-                ("martincs@wofford.edu", "Collin Martin", [UserRole.ATTENDEE]),
-                ("podrebarackc@wofford.edu", "Kate Podrebarac", [UserRole.ATTENDEE]),
-                ("gammahja@wofford.edu", "Joel Gammah", [UserRole.ATTENDEE]),
-                ("garrettal@wofford.edu", "Aaron Garrett", [UserRole.ORGANIZER, UserRole.ATTENDEE]),  # Professor with multi-role
-            ]
-            for email, name, roles in demo:
-                # Create user without legacy role field
-                u = User(email=email, name=name, password_hash=get_password_hash(email.split("@")[0]))
-                db.add(u)
-                db.flush()  # Get the ID
+    try:
+        with Session(bind=engine) as db:
+            # Check if users already exist (idempotent seeding)
+            if not db.query(User).count():
+                # Seed with tuple of (email, name, roles_list)
+                demo = [
+                    ("grayj@wofford.edu", "John Gray", [UserRole.ORGANIZER, UserRole.ATTENDEE]),
+                    ("clublead@wofford.edu", "Club Lead", [UserRole.ORGANIZER]),
+                    ("martincs@wofford.edu", "Collin Martin", [UserRole.ATTENDEE]),
+                    ("podrebarackc@wofford.edu", "Kate Podrebarac", [UserRole.ATTENDEE]),
+                    ("gammahja@wofford.edu", "Joel Gammah", [UserRole.ATTENDEE]),
+                    ("garrettal@wofford.edu", "Aaron Garrett", [UserRole.ORGANIZER, UserRole.ATTENDEE]),  # Professor with multi-role
+                    ("adminterrier@wofford.edu", "Admin Terrier", [UserRole.ADMIN, UserRole.ORGANIZER, UserRole.ATTENDEE])
+                ]
+                for email, name, roles in demo:
+                    # Create user
+                    u = User(email=email, name=name, password_hash=get_password_hash(email.split("@")[0]))
+                    db.add(u)
+                    db.flush()  # Get the ID
+                    
+                    # Add all roles to user_roles table
+                    for role in roles:
+                        db.add(UserRoleAssignment(user_id=u.id, role=role.value))
                 
-                # Add all roles to user_roles table
-                for role in roles:
-                    db.add(UserRoleAssignment(user_id=u.id, role=role.value))
-            
-            db.commit()
-        else:
-            # No backfill needed since legacy role field is removed
-            pass
+                db.commit()
+                print("✅ Demo users seeded successfully")
+            else:
+                print("ℹ️  Users already exist, skipping seed")
+    except Exception as e:
+        print(f"⚠️  Startup seeding failed: {e}")
+        print("   Make sure to run 'alembic upgrade head' to create tables first!")

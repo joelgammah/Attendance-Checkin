@@ -41,15 +41,9 @@ describe('DashboardPage Coverage Tests', () => {
       )
       
       render(<DashboardPage />)
-      
-      // Initially should show loading
-      expect(screen.getByTestId('nav')).toBeInTheDocument()
-      
-      // Wait for loading to complete
-      await waitFor(() => {
-        // The loading state should be done
-        expect(screen.getByTestId('nav')).toBeInTheDocument()
-      }, { timeout: 1000 })
+
+      // Initially should show loading (wait for Nav to be present to avoid race)
+      await waitFor(() => expect(screen.getByTestId('nav')).toBeInTheDocument(), { timeout: 1000 })
     })
   })
 

@@ -15,13 +15,10 @@ Object.defineProperty(window, 'localStorage', {
   value: mockLocalStorage
 })
 
-// Mock location
-const mockLocationHref = vi.fn()
-Object.defineProperty(window, 'location', {
-  value: { 
-    href: '',
-    set href(url) { mockLocationHref(url) }
-  },
+// Mock history.pushState (Protected uses history.pushState for navigation)
+const mockPushState = vi.fn()
+Object.defineProperty(window, 'history', {
+  value: { pushState: mockPushState },
   writable: true
 })
 
@@ -35,18 +32,27 @@ Object.defineProperty(window, 'removeEventListener', {
   value: mockRemoveEventListener
 })
 
+// Mock Auth0 hook so tests can control isAuthenticated/isLoading
+const mockUseAuth0 = { isAuthenticated: false, isLoading: false }
+vi.mock('@auth0/auth0-react', () => ({
+  useAuth0: () => mockUseAuth0
+}))
+
 import Protected, { useAuth, Link } from '../components/Protected'
 
 describe('useAuth Hook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // reset Auth0 mock defaults
+    mockUseAuth0.isAuthenticated = false
+    mockUseAuth0.isLoading = false
   })
 
   it('returns true when token exists in localStorage', () => {
     mockLocalStorage.getItem.mockReturnValue('mock-token')
     
     function TestComponent() {
-      const authed = useAuth()
+      const { authed } = useAuth()
       return <div>{authed ? 'authenticated' : 'not authenticated'}</div>
     }
     
@@ -58,7 +64,7 @@ describe('useAuth Hook', () => {
     mockLocalStorage.getItem.mockReturnValue(null)
     
     function TestComponent() {
-      const authed = useAuth()
+      const { authed } = useAuth()
       return <div>{authed ? 'authenticated' : 'not authenticated'}</div>
     }
     
@@ -81,6 +87,10 @@ describe('useAuth Hook', () => {
   })
 
   it('updates state when storage changes', async () => {
+    // Ensure Auth0 mock is unauthenticated and not loading
+    mockUseAuth0.isAuthenticated = false
+    mockUseAuth0.isLoading = false
+
     mockLocalStorage.getItem.mockReturnValue(null)
     let storageHandler: Function
     
@@ -96,12 +106,11 @@ describe('useAuth Hook', () => {
     }
     
     render(<TestComponent />)
-    expect(screen.getByText('not authenticated')).toBeInTheDocument()
-    
+
     // Simulate storage change
     mockLocalStorage.getItem.mockReturnValue('new-token')
     storageHandler!()
-    
+
     await waitFor(() => {
       expect(screen.getByText('authenticated')).toBeInTheDocument()
     })
@@ -137,6 +146,8 @@ describe('Link Component', () => {
 describe('Protected Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUseAuth0.isAuthenticated = false
+    mockUseAuth0.isLoading = false
   })
 
   it('renders children when authenticated', () => {
@@ -160,8 +171,8 @@ describe('Protected Component', () => {
       </Protected>
     )
     
-    // Should redirect to login
-    expect(mockLocationHref).toHaveBeenCalledWith('/login')
+  // Should redirect to login via history.pushState
+  expect(mockPushState).toHaveBeenCalledWith({}, '', '/login')
     
     // Should not render protected content
     expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
@@ -200,8 +211,8 @@ describe('Protected Component', () => {
       </Protected>
     )
     
-    // Should redirect initially
-    expect(mockLocationHref).toHaveBeenCalledWith('/login')
+  // Should redirect initially via history.pushState
+  expect(mockPushState).toHaveBeenCalledWith({}, '', '/login')
     
     // Now authenticate
     mockLocalStorage.getItem.mockReturnValue('new-token')

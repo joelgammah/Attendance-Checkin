@@ -14,13 +14,14 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 - On first backend start, the SQLite DB is created and demo users are seeded.
 - Frontend auto‑reloads on changes. Backend auto‑reloads on changes in `backend/app/`.
 - Always run backend commands from the `backend/` directory to ensure the SQLite DB is created at `backend/app.db`.
+- **Dependencies**: Backend uses both `pyproject.toml` (local dev) and `requirements.txt` (Docker). When adding/updating dependencies, remember to update **both files** manually.
 - API base URL: frontend defaults to `http://localhost:8000`. To override:
 	```bash
 	# from frontend/
 	VITE_API_URL=http://localhost:8000 pnpm dev
 	```
 
-### First Run (Dev)
+### First Run (Dev) - MacOS
 - Prerequisites:
 	- Python 3.11+ (3.13 OK)
 	- pip
@@ -44,7 +45,7 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 	```
 	Visit http://localhost:5173
 
-## Windows First Run (Powershell)
+### Windows First Run (Dev) (Powershell)
 - Backend:
 	py -3.11 -m venv .venv   |  use what python version you have
 	.\.venv\Scripts\Activate.ps1
@@ -79,7 +80,8 @@ A minimal, production‑ready scaffold to let organizers create events, generate
 - Attendee: `gammahja@wofford.edu`
 - Attendee: `martincs@wofford.edu`
 - Attendee: `podrebarackc@wofford.edu`
-- Organizer & Attendee: `garrettal@wofford.edu` (you will have to insert this user manually into the user and user_roles tables in the DB)
+- Organizer: `garrettal@wofford.edu` 
+- Admin: `adminterrier@wofford.edu`
 
 ## Tests & Coverage
 
@@ -90,6 +92,18 @@ cd backend
 python -m pytest -q --cov=app --cov-report=term-missing:skip-covered --cov-report=html --cov-fail-under=80
 ```
 HTML report in `backend/htmlcov/index.html`.
+
+#### Other useful backend test commands
+
+| Command | Description |
+|---------|-------------|
+| `python -m pytest` | Run all tests (no coverage, quick check) |
+| `python -m pytest tests/unit/test_deps.py` | Run tests in a specific file |
+| `python -m pytest tests/unit/test_events.py::test_event_creation` | Run a specific test function |
+| `python -m pytest -p no:cov` | Run all tests without coverage plugin (even if addopts is set) |
+| `python -m pytest --lf` | Rerun only tests that failed in the last run |
+| `python -m pytest -q` | Run all tests in quiet mode (less output) |
+
 
 ### Frontend
 ```bash
@@ -130,16 +144,24 @@ sqlite3 backend/app.db "SELECT name, location FROM events;"
 
 ## Docker
 
+Uses PostgreSQL by default. See **[`POSTGRES_MIGRATION.md`](POSTGRES_MIGRATION.md)** for complete setup guide.
+
 ```bash
+# Optional: Create .env file 
+1. Need a .env file in root directory
+2. Need a .env.docker file in frontend/ directory
+
+# Start all services (PostgreSQL + Backend + Frontend)
 docker compose up --build
 ```
-- Frontend at http://localhost:8080
-- Backend internal at `backend:8000`, proxied via Nginx at `/api/`
 
-### Switching to Postgres
-1. Uncomment/add a `postgres` service in `docker-compose.yml` (optional) and set `DATABASE_URL=postgresql+psycopg://user:pass@postgres:5432/dbname` for backend.
-2. Add `psycopg[binary]` to backend dependencies if needed.
-3. Run `alembic upgrade head` (the backend container does this on start).
+- **Frontend**: http://localhost:8080
+- **Backend API**: http://localhost:8000/docs
+
+**IMPORTANT FOR PRODUCTION**
+- Update `POSTGRES_PASSWORD` in `.env` to a strong password.
+- Update `AUTH0_DOMAIN` and `AUTH0_AUDIENCE` in `.env` with your Auth0 tenant details.
+- Update `SECRET_KEY` in `.env` to a strong, random value. Use `openssl rand -hex 32` to generate one.
 
 ## Notes
 - Check‑in window opens `checkin_open_minutes` (default 15) **before** start and closes at end.
@@ -158,10 +180,9 @@ docker compose up --build
 	```
 
 ## Roadmap
-- Wofford SSO integration
 - Admin console for org/user management
 - Anti‑cheat: rotating tokens, GPS/Bluetooth geofencing, one‑time links
-- Attendance detail views and CSV column enrichment (names/emails)# Attendance-Checkin
+- Mobile version
 
 ## Auth0 (local dev env variables)
 

@@ -10,12 +10,13 @@ const Auth0Inner: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   React.useEffect(() => {
     // Initialize user profile for Auth0 users
     if (isAuthenticated && !isLoading && user) {
+      console.debug('[Auth0Inner] isAuthenticated && !isLoading && user ->', { isAuthenticated, isLoading, userEmail: user?.email, storedEmail: localStorage.getItem('user_email') })
       const hasRoleData = localStorage.getItem('primary_role')
       const storedEmail = localStorage.getItem('user_email')
-      
+
       // Check if stored email matches Auth0 user email
       const isCorrectUser = storedEmail === user.email
-      
+
       if (!hasRoleData || !isCorrectUser) {
         if (!isCorrectUser) {
           // Clear any old user data to prevent showing wrong user's info
@@ -28,8 +29,9 @@ const Auth0Inner: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         
         // Add a small delay to ensure token provider is ready
         setTimeout(() => {
-          initializeAuth0UserProfile().catch(() => {
-            // Initialization failed, user may need to log in again
+          console.debug('[Auth0Inner] calling initializeAuth0UserProfile after delay; local token present?', !!localStorage.getItem('token'))
+          initializeAuth0UserProfile().catch((err) => {
+            console.error('Failed to initialize Auth0 user profile:', err)
           })
         }, 100)
       }
@@ -39,16 +41,23 @@ const Auth0Inner: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   React.useEffect(() => {
     // Register a token provider that client.ts can call to get the current access token
     setTokenProvider(async () => {
+      console.debug('[Auth0Inner] tokenProvider invoked; isAuthenticated=', isAuthenticated)
       try {
         // Always prioritize Auth0 if user is authenticated via Auth0
         if (isAuthenticated) {
-          // Test without audience to see if basic Auth0 token works with backend
-          const token = await getAccessTokenSilently()
+          const token = await getAccessTokenSilently({
+            authorizationParams: {
+              audience: import.meta.env.VITE_AUTH0_AUDIENCE as string | undefined
+            }
+          })
+          console.debug('[Auth0Inner] getAccessTokenSilently returned token (masked):', token ? `${token.slice(0,8)}...` : null)
           return token
         } else {
+          console.debug('[Auth0Inner] tokenProvider: not authenticated via Auth0, returning null')
           return null // Will fall back to localStorage in client.ts
         }
       } catch (e: any) {
+        console.debug('[Auth0Inner] tokenProvider threw', e)
         // Handle consent_required error by triggering interactive login
         if (e.error === 'consent_required' || /consent_required/i.test(e?.message || '')) {
           await loginWithRedirect({ 
@@ -58,6 +67,7 @@ const Auth0Inner: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           })
           return null // Will redirect, so no token to return now
         }
+        console.warn('Token fetch failed, falling back to localStorage')
         return null // Will fall back to localStorage in client.ts
       }
     })
@@ -82,6 +92,8 @@ export const Auth0ProviderWithConfig: React.FC<{ children: React.ReactNode }> = 
         audience,
         scope: 'openid profile email',
       }}
+      cacheLocation="localstorage"
+      useRefreshTokens={false}
     >
       <Auth0Inner>{children}</Auth0Inner>
     </Auth0Provider>

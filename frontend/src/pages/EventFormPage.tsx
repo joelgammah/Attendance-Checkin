@@ -1,6 +1,7 @@
 import React from 'react'
 import Nav from '../components/Nav'
 import { createEvent } from '../api/events'
+import { Link } from '../components/Protected'
 
 export default function EventFormPage(){
   const [form, setForm] = React.useState({ name: '', location: '', start_time: '', end_time: '', notes: '', recurring: false, weekdays: [] as string[], end_date: '' })
@@ -24,7 +25,10 @@ export default function EventFormPage(){
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone // User's timezone
       }
       const ev = await createEvent(payload)
-      location.href = `/events/${ev.checkin_token}`
+      
+      // FIX: Use pushState instead of location.href to preserve Auth0 state
+      history.pushState({}, '', `/events/${ev.checkin_token}`)
+      window.dispatchEvent(new PopStateEvent('popstate'))
     } catch(err:any){ 
       setError(err.message) 
     } finally {
@@ -38,8 +42,8 @@ export default function EventFormPage(){
       
       {/* Back Button */}
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <a 
-          href="/" 
+        <Link 
+          to="/" 
           className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors duration-200 mb-6"
           onMouseEnter={(e) => {
             e.currentTarget.style.color = '#95866A';
@@ -52,7 +56,7 @@ export default function EventFormPage(){
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Back to Dashboard
-        </a>
+        </Link>
       </div>
 
       {/* Main Content */}
