@@ -36,12 +36,13 @@ def on_startup():
         if not db.query(User).count():
             # Seed with tuple of (email, name, roles_list)
             demo = [
-                ("grayj@wofford.edu", "John Gray", [UserRole.ORGANIZER]),
+                ("grayj@wofford.edu", "John Gray", [UserRole.ORGANIZER, UserRole.ATTENDEE]),
                 ("clublead@wofford.edu", "Club Lead", [UserRole.ORGANIZER]),
                 ("martincs@wofford.edu", "Collin Martin", [UserRole.ATTENDEE]),
                 ("podrebarackc@wofford.edu", "Kate Podrebarac", [UserRole.ATTENDEE]),
                 ("gammahja@wofford.edu", "Joel Gammah", [UserRole.ATTENDEE]),
                 ("garrettal@wofford.edu", "Aaron Garrett", [UserRole.ORGANIZER, UserRole.ATTENDEE]),  # Professor with multi-role
+                ("adminterrier@wofford.edu", "Admin Terrier", [UserRole.ADMIN, UserRole.ORGANIZER, UserRole.ATTENDEE])
             ]
             for email, name, roles in demo:
                 # Create user without legacy role field
