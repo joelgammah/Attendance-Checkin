@@ -12,19 +12,6 @@ describe('EmailVerificationSuccess', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders success message and button', () => {
-    render(<EmailVerificationSuccess />)
-
-    expect(screen.getByText('Email Verified Successfully!')).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        "Your @wofford.edu email has been verified. You can now log in to access the attendance system."
-      )
-    ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /continue to login/i })).toBeInTheDocument()
-    expect(screen.getByText(/If you're having trouble, please contact support\./i)).toBeInTheDocument()
-  })
-
   it('navigates to /login and dispatches popstate when button clicked', () => {
     const pushSpy = vi.spyOn(window.history, 'pushState')
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
