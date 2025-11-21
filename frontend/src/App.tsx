@@ -12,6 +12,7 @@ import CheckInStart from './pages/CheckInStart'
 import { getActiveRole } from './api/auth'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import EmailVerificationSuccess from './pages/EmailVerificationSuccess'
+import EventFamilyPage from './pages/EventFamilyPage'
 
 // Minimal router helpers
 function usePath(){ 
@@ -25,10 +26,18 @@ function usePath(){
   
   return path 
 }
+
+
 export function useParams(){
   const path = usePath()
+
   const m = path.match(/\/events\/(.+)$/)
   const attendeesMatch = path.match(/^\/events\/(\d+)\/attendees$/)
+
+  const familyMatch = path.match(/^\/events\/(\d+)\/family$/)
+  if (familyMatch) {
+    return { eventId: familyMatch[1] }
+  }
   
   if (attendeesMatch) {
     return { eventId: attendeesMatch[1] }
@@ -89,6 +98,7 @@ export default function App(){
   if(path === '/callback') return <CallbackPage />
   if(path === '/email-verified') return <EmailVerificationSuccess />
   if(path.startsWith('/login')) return <LoginPage />
+  if (path.match(/^\/events\/\d+\/family$/)) return <Protected roles={['organizer', 'admin']}><EventFamilyPage /></Protected>
   if(path.startsWith('/events/new')) return <Protected roles={['organizer', 'admin']}><EventFormPage /></Protected>
   if(path.match(/^\/events\/\d+\/attendees$/)) return <Protected roles={['organizer', 'admin']}><EventAttendeesPage /></Protected>
   if(path.startsWith('/events/')) return <Protected roles={['organizer', 'admin']}><EventDetailPage /></Protected>

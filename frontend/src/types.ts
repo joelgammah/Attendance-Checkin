@@ -23,6 +23,7 @@ export interface EventOut {
   end_date?: string
   parent_id?: number
   member_count: number
+  attendance_threshold?: number
 }
 
 export interface EventMember {
@@ -38,6 +39,14 @@ export type SessionOut = {
   start_time: string;
   end_time: string;
 };
+
+export interface SessionListOut {
+  id: number
+  start_time: string
+  end_time: string
+  checkin_token: string
+}
+
 
 export type RecurringGroup = {
   parent: EventOut;
@@ -67,10 +76,26 @@ export interface MemberAttendanceSummary {
 }
 
 export interface EventFamilyResponse {
-  parent: SessionOut
-  upcoming_children: SessionOut[]
-  past_children: SessionOut[]
+  parent: EventOut
+  upcoming_children: SessionListOut[]
+  past_children: SessionListOut[]
   total_past_sessions: number
   members: MemberAttendanceSummary[]
 }
 
+// ------------------------------
+// Attendee: My Events Overview
+// ------------------------------
+
+export interface MyEventSummary {
+  parent: EventOut                 // full event
+  next_session: SessionOut | null  // next session the attendee can go to
+  attended: number
+  missed: number
+  flagged: boolean
+  total_past_sessions: number
+}
+
+export interface MyEventsOut {
+  events: MyEventSummary[]
+}

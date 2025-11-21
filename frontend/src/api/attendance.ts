@@ -1,4 +1,22 @@
 import { fetchJson } from './client'
+import type { EventOut, SessionOut } from '../types'
+
+// ------------------------------
+// Attendee: My Events Overview
+// ------------------------------
+
+export interface MyEventSummary {
+  parent: EventOut                 // full event
+  next_session: SessionOut | null  // next session the attendee can go to
+  attended: number
+  missed: number
+  flagged: boolean
+  total_past_sessions: number
+}
+
+export interface MyEventsOut {
+  events: MyEventSummary[]
+}
 
 export interface MyCheckIn {
   id: number
@@ -18,4 +36,10 @@ export async function checkIn(eventToken: string) {
     method: 'POST',
     body: JSON.stringify({ event_token: eventToken })
   })
+}
+
+
+export async function getMyEvents(): Promise<MyEventSummary[]> {
+  const data = await fetchJson<MyEventsOut>('/v1/events/attendee/my-events')
+  return data.events
 }

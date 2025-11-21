@@ -1,10 +1,87 @@
 import React from 'react'
 import { Link } from '../components/Protected'
-import { getMyCheckIns, MyCheckIn } from '../api/attendance'
-import { logout } from '../api/auth'
-import RoleSwitch from '../components/RoleSwitch'
 import { useAuth0 } from '@auth0/auth0-react'
+import RoleSwitch from '../components/RoleSwitch'
+import { logout } from '../api/auth'
+import { getMyCheckIns, getMyEvents, MyCheckIn, MyEventSummary } from '../api/attendance'
 
+// -------------------------------------------------------
+// COMPONENT: My Events (left side)
+// -------------------------------------------------------
+function MyEventsCard({ groups }: { groups: MyEventSummary[] }) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+      {/* Header */}
+      <div className="flex items-center space-x-3 mb-6">
+        <div
+          className="flex items-center justify-center w-12 h-12 rounded-lg"
+          style={{ backgroundColor: 'rgba(149, 134, 106, 0.1)' }}
+        >
+          <svg
+            className="w-6 h-6"
+            style={{ color: '#95866A' }}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900">My Events</h2>
+      </div>
+
+      {groups.length === 0 ? (
+        <p className="text-gray-600">You are not a member of any events yet.</p>
+      ) : (
+        <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+          {groups.map((g) => (
+            <div
+              key={g.parent.id}
+              className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors duration-200 cursor-pointer"
+              onClick={() => {
+                history.pushState({}, '', `/attendee/events/${g.parent.id}`)
+                window.dispatchEvent(new PopStateEvent('popstate'))
+              }}
+            >
+              <div className="mb-2">
+                <h3 className="font-semibold text-gray-900 text-lg">
+                  {g.parent.name}
+                </h3>
+                <p className="text-sm text-gray-600">{g.parent.location}</p>
+              </div>
+
+              {g.next_session ? (
+                <p className="text-sm text-gray-700">
+                  <span className="font-medium">Next session:</span>{' '}
+                  {new Date(g.next_session.start_time).toLocaleDateString()} at{' '}
+                  {new Date(g.next_session.start_time).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500 italic">No upcoming sessions</p>
+              )}
+
+              <p className="text-xs mt-2 text-gray-500">
+                {g.total_past_sessions} total sessions so far
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// -------------------------------------------------------
+// MAIN PAGE
+// -------------------------------------------------------
 export default function AttendeeDashboard() {
   const { isAuthenticated, logout: auth0Logout } = useAuth0()
   const [checkIns, setCheckIns] = React.useState<MyCheckIn[]>([])
@@ -14,34 +91,37 @@ export default function AttendeeDashboard() {
   const [showAll, setShowAll] = React.useState(false)
   const [hasMore, setHasMore] = React.useState(false)
 
+  const [myEvents, setMyEvents] = React.useState<MyEventSummary[]>([])
+  const [eventsLoading, setEventsLoading] = React.useState(true)
+
   React.useEffect(() => {
     async function loadData() {
       try {
-        // Get user email from localStorage (stored during login)
+        // Get user email
         const storedEmail = localStorage.getItem('user_email')
-        if (storedEmail) {
-          setUserEmail(storedEmail)
-        } else {
-          setUserEmail('Student')
-        }
-        // Load check-ins (preview only)
+        setUserEmail(storedEmail ? storedEmail : 'Student')
+
+        // Load check-ins
         const data = await getMyCheckIns()
         setCheckIns(data.slice(0, 5))
         setHasMore(data.length > 5)
+
+        // Load events (groups)
+        const groups = await getMyEvents()
+        setMyEvents(groups)
       } catch (error) {
         console.error('Failed to load data:', error)
-        setUserEmail('Student')
       } finally {
         setLoading(false)
+        setEventsLoading(false)
       }
     }
     loadData()
   }, [])
 
-  // Handler for toggling all check-ins
+  // Expand/collapse check-ins
   const handleToggleCheckIns = async () => {
     if (!showAll && allCheckIns === null) {
-      // Fetch all check-ins only once
       try {
         setLoading(true)
         const data = await getMyCheckIns()
@@ -57,13 +137,25 @@ export default function AttendeeDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Modern Navigation */}
+      {/* NAV BAR */}
       <nav className="w-full flex items-center justify-between p-6 bg-white border-b border-gray-200 shadow-sm">
-        {/* Brand/Logo */}
         <div className="flex items-center space-x-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg" style={{backgroundColor: '#95866A'}}>
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1V6a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1zM5 20h2a1 1 0 001-1v-1a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1z" />
+          <div
+            className="flex items-center justify-center w-10 h-10 rounded-lg"
+            style={{ backgroundColor: '#95866A' }}
+          >
+            <svg
+              className="w-6 h-6 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1V6a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1zM5 20h2a1 1 0 001-1v-1a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1z"
+              />
             </svg>
           </div>
           <div>
@@ -71,49 +163,57 @@ export default function AttendeeDashboard() {
           </div>
         </div>
 
-        {/* Navigation Links */}
+        {/* NAV ITEMS */}
         <div className="flex items-center space-x-1">
-          {/* Role Switcher */}
           <div className="mr-4">
             <RoleSwitch />
           </div>
-          {/* Dashboard Link */}
-          <Link 
-          to="/" 
-          className="px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:text-gray-900 transition-colors duration-200"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.1)';
-            e.currentTarget.style.color = '#95866A';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = '#374151';
-          }}
-        >
-          <div className="flex items-center space-x-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z" />
-            </svg>
-            <span>Dashboard</span>
-          </div>
-        </Link>
-          {/* Check-In Link */}
-          <Link 
-            to="/checkin/start" 
+
+          <Link
+            to="/"
             className="px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:text-gray-900 transition-colors duration-200"
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.1)';
-              e.currentTarget.style.color = '#95866A';
+              e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.1)'
+              e.currentTarget.style.color = '#95866A'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#374151';
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.color = '#374151'
             }}
           >
             <div className="flex items-center space-x-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1V6a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1zM5 20h2a1 1 0 001-1v-1a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1z" />
+              <svg className="w-4 h-4" fill="none" stroke="current-color" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+                />
+              </svg>
+              <span>Dashboard</span>
+            </div>
+          </Link>
+
+          <Link
+            to="/checkin/start"
+            className="px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:text-gray-900 transition-colors duration-200"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(149, 134, 106, 0.1)'
+              e.currentTarget.style.color = '#95866A'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.color = '#374151'
+            }}
+          >
+            <div className="flex items-center space-x-2">
+              <svg className="w-4 h-4" fill="none" stroke="current-color" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1z"
+                />
               </svg>
               <span>Check In</span>
             </div>
@@ -122,60 +222,71 @@ export default function AttendeeDashboard() {
           {/* Divider */}
           <div className="h-6 w-px bg-gray-300 mx-2"></div>
 
-          {/* Logout Button */}
-          <button 
-            onClick={() => { 
-              // If Auth0 user, clear ALL localStorage before Auth0 logout
+          {/* Logout */}
+          <button
+            onClick={() => {
               if (isAuthenticated) {
-                // Clear ALL localStorage (including our custom keys AND Auth0's cache)
-                // This prevents any stale data from being restored after Auth0 redirect
                 localStorage.clear()
-                
-                // Now call Auth0 logout which will redirect through Auth0
-                auth0Logout({
-                  logoutParams: {
-                    returnTo: window.location.origin
-                  }
-                })
+                auth0Logout({ logoutParams: { returnTo: window.location.origin } })
               } else {
-                // Demo account - clear localStorage and navigate to login
                 logout()
                 location.href = '/login'
               }
-            }} 
+            }}
             className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200 active:scale-95"
-            style={{backgroundColor: '#95866A'}}
+            style={{ backgroundColor: '#95866A' }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#7d6f57';
+              e.currentTarget.style.backgroundColor = '#7d6f57'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#95866A';
+              e.currentTarget.style.backgroundColor = '#95866A'
             }}
           >
             <div className="flex items-center space-x-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
               </svg>
               <span>Logout</span>
             </div>
           </button>
         </div>
       </nav>
-      
-      {/* Header Section */}
+
+      {/* Hero */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center space-x-4">
-            <div className="flex items-center justify-center w-16 h-16 rounded-xl" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)'}}>
-              <svg className="w-8 h-8" style={{color: '#95866A'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            <div
+              className="flex items-center justify-center w-16 h-16 rounded-xl"
+              style={{ backgroundColor: 'rgba(149, 134, 106, 0.1)' }}
+            >
+              <svg
+                className="w-8 h-8"
+                style={{ color: '#95866A' }}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
               </svg>
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
                 Welcome {userEmail.split('@')[0]}!
               </h1>
-              <p className="mt-2 text-gray-600">Check into events and view your attendance history.</p>
+              <p className="mt-2 text-gray-600">
+                View your event memberships and check-in history.
+              </p>
             </div>
           </div>
         </div>
@@ -184,55 +295,14 @@ export default function AttendeeDashboard() {
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid gap-8 lg:grid-cols-2">
-          
-          {/* Quick Check-In Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg" style={{backgroundColor: 'rgba(149, 134, 106, 0.1)'}}>
-                <svg className="w-6 h-6" style={{color: '#95866A'}} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1V6a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1zM5 20h2a1 1 0 001-1v-1a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1z" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900">Quick Check-In</h2>
-            </div>
-            
-            <p className="text-gray-600 mb-6 leading-relaxed">
-              Ready to join an event? Use your camera to scan a QR code or enter an event token to check in instantly.
-            </p>
-            
-            <Link 
-              to="/checkin/start" 
-              className="inline-flex items-center px-6 py-3 text-white font-medium rounded-lg transition-all duration-200 active:scale-95"
-              style={{backgroundColor: '#95866A'}}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#7d6f57';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#95866A';
-              }}
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1V6a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1zM5 20h2a1 1 0 001-1v-1a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1z" />
-              </svg>
-              Start Check-In
-            </Link>
+          {/* LEFT: My Events */}
+          <MyEventsCard groups={myEvents} />
 
-            <div className="mt-6 p-4 rounded-lg" style={{backgroundColor: 'rgba(149, 134, 106, 0.05)', borderColor: 'rgba(149, 134, 106, 0.2)', borderWidth: '1px'}}>
-              <div className="flex items-start space-x-3">
-                <svg className="w-5 h-5 mt-0.5 flex-shrink-0" style={{color: '#95866A'}} fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-                <div>
-                  <h4 className="text-sm font-medium" style={{color: '#6b5a47'}}>How it works</h4>
-                  <p className="text-sm mt-1" style={{color: '#7d6f57'}}>
-                    Scan the QR code displayed at the event or enter the event token manually to record your attendance.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Recent Check-ins Card */}
+          {/* RIGHT: Recent Check-ins */}
+          {/* <=== This entire block remains unchanged; paste your original here ===> */}
+          {/* I intentionally did not rewrite it to avoid regression errors */}
+          {/* Just leave your existing "Recent Check-Ins Card" exactly as-is */}
+                    {/* Recent Check-ins Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
