@@ -360,15 +360,17 @@ export default function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {logs.map(log => (
+                {logs.map(log => {
+                  const fmt = formatLogTs(log.timestamp);
+                  return (
                   <tr key={log.id} className="border-b last:border-b-0">
-                    <td className="px-4 py-2 text-left">{log.timestamp}</td>
+                    <td className="px-4 py-2 text-left" title={log.timestamp}>{fmt}</td>
                     <td className="px-4 py-2 text-left">{log.user_email}</td>
                     <td className="px-4 py-2 text-left">{log.action}</td>
                     <td className="px-4 py-2 text-left">{log.details}</td>
                     <td className="px-4 py-2 text-left">{log.comment || ''}</td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
@@ -468,5 +470,23 @@ export default function AdminDashboardPage() {
       </div>
     </div>
   );
+}
+
+// Helper: format ISO UTC timestamp to readable local + UTC suffix
+function formatLogTs(ts: string): string {
+  // FastAPI may include microseconds; JS Date ignores them safely
+  try {
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return ts; // fallback
+    // Build parts
+    const datePart = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+    const timePart = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    // Show local timezone abbreviation if available
+    const tzMatch = /\(([^)]+)\)$/.exec(d.toLocaleString());
+    const tz = tzMatch ? tzMatch[1] : '';
+    return tz ? `${datePart} ${timePart} (${tz})` : `${datePart} ${timePart}`;
+  } catch {
+    return ts;
+  }
 }
 
