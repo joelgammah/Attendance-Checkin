@@ -13,3 +13,5 @@ class AuditLog(Base):
     resource_id = Column(String, nullable=True)
     details = Column(String, nullable=True)
     ip_address = Column(String, nullable=True)
+    # Optional admin-provided comment explaining the action
+    comment = Column(String, nullable=True)

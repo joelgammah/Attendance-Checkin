@@ -13,7 +13,7 @@ class Settings(BaseModel):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 12
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL", 
-        "postgresql+psycopg://postgres:postgres@localhost:5432/attendance"
+        "postgresql+psycopg://postgres:postgres@localhost:5432/terriercheckin"
     )
     CORS_ORIGINS: list[str] = [os.getenv("CORS_ORIGIN", "http://localhost:5173")]
     DEFAULT_CHECKIN_OPEN_MINUTES: int = 15

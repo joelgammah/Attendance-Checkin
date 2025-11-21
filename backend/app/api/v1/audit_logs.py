@@ -21,6 +21,7 @@ class AuditLogOut(BaseModel):
     resource_id: str | None = None
     details: str | None = None
     ip_address: str | None = None
+    comment: str | None = None
 
     class Config:
         orm_mode = True

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db, require_any_role
@@ -70,6 +70,7 @@ def list_users(
 @router.post("/{user_id}/promote")
 def promote_to_organizer(
     user_id: int,
+    comment: str | None = Query(None, description="Optional admin comment for audit log"),
     db: Session = Depends(get_db),
     admin: User = Depends(require_any_role(UserRole.ADMIN))
 ):
@@ -85,7 +86,8 @@ def promote_to_organizer(
         timestamp=datetime.utcnow(),
         resource_type="user",
         resource_id=str(user.id),
-        details=f"Promoted to organizer: {user.email}"
+        details=f"Promoted to organizer: {user.email}",
+        comment=comment
     )
     return {"detail": "User promoted to organizer"}
 
@@ -93,6 +95,7 @@ def promote_to_organizer(
 @router.post("/{user_id}/revoke-organizer")
 def revoke_organizer(
     user_id: int,
+    comment: str | None = Query(None, description="Optional admin comment for audit log"),
     db: Session = Depends(get_db),
     admin: User = Depends(require_any_role(UserRole.ADMIN))
 ):
@@ -108,7 +111,8 @@ def revoke_organizer(
         timestamp=datetime.utcnow(),
         resource_type="user",
         resource_id=str(user.id),
-        details=f"Revoked organizer: {user.email}"
+        details=f"Revoked organizer: {user.email}",
+        comment=comment
     )
     return {"detail": "Organizer role revoked"}
 
@@ -116,6 +120,7 @@ def revoke_organizer(
 @router.delete("/{user_id}")
 def delete_user(
     user_id: int,
+    comment: str | None = Query(None, description="Optional admin comment for audit log"),
     db: Session = Depends(get_db),
     admin: User = Depends(require_any_role(UserRole.ADMIN))
 ):
@@ -131,13 +136,15 @@ def delete_user(
         timestamp=datetime.utcnow(),
         resource_type="user",
         resource_id=str(user.id),
-        details=f"Deleted user: {user.email}"
+        details=f"Deleted user: {user.email}",
+        comment=comment
     )
     return {"detail": "User deleted"}
 
 @router.post("/", status_code=201)
 def create_user(
     user_in: UserCreate,
+    comment: str | None = Query(None, description="Optional admin comment for audit log"),
     db: Session = Depends(get_db),
     admin: User = Depends(require_any_role(UserRole.ADMIN))
 ):
@@ -166,6 +173,7 @@ def create_user(
         timestamp=datetime.utcnow(),
         resource_type="user",
         resource_id=str(user.id),
-        details=f"Created user: {user.email}"
+        details=f"Created user: {user.email}",
+        comment=comment
     )
     return {"id": user.id, "email": user.email, "name": user.name, "roles": [r.role for r in user.role_assignments]}
