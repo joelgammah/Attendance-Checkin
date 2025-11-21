@@ -247,7 +247,11 @@ docker exec -it postgres-dev psql -U postgres -d terriercheckin -c "SELECT email
 
 **Interactive shell (from anywhere):**
 ```bash
+# For local development postgres container
 docker exec -it postgres-dev psql -U postgres -d terriercheckin
+
+# For Docker Compose setup
+docker compose exec postgres psql -U postgres -d terriercheckin
 ```
 
 **Useful SQL commands once in shell:**
