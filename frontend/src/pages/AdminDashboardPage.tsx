@@ -350,6 +350,7 @@ export default function AdminDashboardPage() {
                   <th className="px-4 py-2 bg-gray-100 text-[#95866A] font-semibold text-left">User</th>
                   <th className="px-4 py-2 bg-gray-100 text-[#95866A] font-semibold text-left">Action</th>
                   <th className="px-4 py-2 bg-gray-100 text-[#95866A] font-semibold text-left">Details</th>
+                  <th className="px-4 py-2 bg-gray-100 text-[#95866A] font-semibold text-left">Comments</th>
                 </tr>
               </thead>
               <tbody>
@@ -359,6 +360,7 @@ export default function AdminDashboardPage() {
                     <td className="px-4 py-2 text-left">{log.user_email}</td>
                     <td className="px-4 py-2 text-left">{log.action}</td>
                     <td className="px-4 py-2 text-left">{log.details}</td>
+                    <td className="px-4 py-2 text-left"></td>
                   </tr>
                 ))}
               </tbody>
