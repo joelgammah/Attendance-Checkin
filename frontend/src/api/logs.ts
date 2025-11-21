@@ -9,7 +9,7 @@ export interface AuditLog {
   resource_id: string | null;
   details: string;
   ip_address: string | null;
-  // Add more fields as needed
+  comment: string | null;
 }
 
 export async function getAuditLogs(): Promise<AuditLog[]> {

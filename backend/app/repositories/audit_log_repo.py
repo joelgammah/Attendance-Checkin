@@ -14,6 +14,7 @@ class AuditLogRepository:
         resource_id: Optional[str] = None,
         details: Optional[str] = None,
         ip_address: Optional[str] = None,
+        comment: Optional[str] = None,
     ):
         log = AuditLog(
             action=action,
@@ -23,6 +24,7 @@ class AuditLogRepository:
             resource_id=resource_id,
             details=details,
             ip_address=ip_address,
+            comment=comment,
         )
         db.add(log)
         db.commit()

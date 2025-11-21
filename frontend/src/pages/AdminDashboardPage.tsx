@@ -37,6 +37,7 @@ export default function AdminDashboardPage() {
     }, 7000);
   };
 
+
   React.useEffect(() => {
     (async () => {
       if (role !== 'admin') {
@@ -360,7 +361,7 @@ export default function AdminDashboardPage() {
                     <td className="px-4 py-2 text-left">{log.user_email}</td>
                     <td className="px-4 py-2 text-left">{log.action}</td>
                     <td className="px-4 py-2 text-left">{log.details}</td>
-                    <td className="px-4 py-2 text-left"></td>
+                    <td className="px-4 py-2 text-left">{log.comment || ''}</td>
                   </tr>
                 ))}
               </tbody>
