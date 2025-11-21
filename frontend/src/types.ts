@@ -56,3 +56,21 @@ export type DashboardEventsResponse = {
   upcoming: DashboardItem[];
   past: DashboardItem[];
 };
+
+export interface MemberAttendanceSummary {
+  user_id: number
+  name: string
+  email: string
+  attended: number
+  missed: number
+  is_flagged: boolean
+}
+
+export interface EventFamilyResponse {
+  parent: SessionOut
+  upcoming_children: SessionOut[]
+  past_children: SessionOut[]
+  total_past_sessions: number
+  members: MemberAttendanceSummary[]
+}
+

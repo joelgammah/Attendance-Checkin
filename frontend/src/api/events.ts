@@ -1,5 +1,6 @@
 import { fetchJson } from './client'
-import type { EventOut } from '../types'
+import type { DashboardEventsResponse, EventOut, EventFamilyResponse } from '../types'
+
 
 export async function createEvent(payload: any): Promise<EventOut> {
   return fetchJson<EventOut>(`/v1/events/`, { method: 'POST', body: JSON.stringify(payload) })
@@ -7,9 +8,15 @@ export async function createEvent(payload: any): Promise<EventOut> {
 export async function myUpcoming(): Promise<EventOut[]> { return fetchJson(`/v1/events/mine/upcoming`) }
 export async function myPast(): Promise<EventOut[]> { return fetchJson(`/v1/events/mine/past`) }
 
-export async function getDashboardEvents() {
+
+export async function getDashboardEvents(): Promise<DashboardEventsResponse> {
   return fetchJson('/v1/events/dashboard/events')
 }
+
+export async function getEventFamily(parentId: number): Promise<EventFamilyResponse> {
+  return fetchJson(`/v1/events/${parentId}/family`)
+}
+
 
 
 
