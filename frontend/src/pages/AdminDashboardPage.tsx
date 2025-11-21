@@ -26,6 +26,7 @@ export default function AdminDashboardPage() {
   const [notificationMessage, setNotificationMessage] = React.useState('');
   const [actionLoading, setActionLoading] = React.useState<number | null>(null);
   const [confirm, setConfirm] = React.useState<{ type: string, id: number | null, name?: string } | null>(null);
+  const [comment, setComment] = React.useState<string>('');
   const role = getActiveRole();
 
   // Show notification and auto-hide after 5 seconds
@@ -70,10 +71,10 @@ export default function AdminDashboardPage() {
 
 
   // User actions
-  const handlePromote = async (userId: number) => {
+  const handlePromote = async (userId: number, cmt?: string) => {
     setActionLoading(userId);
     try {
-      await promoteUser(userId);
+      await promoteUser(userId, cmt);
       setUsers(users => users.map(u => u.id === userId ? { ...u, roles: [...u.roles, 'organizer'] } : u));
       showSuccessNotification('User promoted to organizer!');
     } catch {
@@ -81,13 +82,14 @@ export default function AdminDashboardPage() {
     } finally {
       setActionLoading(null);
       setConfirm(null);
+      setComment('');
     }
   };
 
-  const handleRevoke = async (userId: number) => {
+  const handleRevoke = async (userId: number, cmt?: string) => {
     setActionLoading(userId);
     try {
-      await revokeOrganizer(userId);
+      await revokeOrganizer(userId, cmt);
       setUsers(users => users.map(u => u.id === userId ? { ...u, roles: u.roles.filter(r => r !== 'organizer') } : u));
       showSuccessNotification('Organizer role revoked!');
     } catch {
@@ -95,13 +97,14 @@ export default function AdminDashboardPage() {
     } finally {
       setActionLoading(null);
       setConfirm(null);
+      setComment('');
     }
   };
 
-  const handleDeleteUser = async (userId: number) => {
+  const handleDeleteUser = async (userId: number, cmt?: string) => {
     setActionLoading(userId);
     try {
-      await apiDeleteUser(userId);
+      await apiDeleteUser(userId, cmt);
       setUsers(users => users.filter(u => u.id !== userId));
       showSuccessNotification('User deleted!');
     } catch {
@@ -109,14 +112,15 @@ export default function AdminDashboardPage() {
     } finally {
       setActionLoading(null);
       setConfirm(null);
+      setComment('');
     }
   };
 
   // Event actions
-  const handleDeleteEvent = async (eventId: number) => {
+  const handleDeleteEvent = async (eventId: number, cmt?: string) => {
     setActionLoading(eventId);
     try {
-      await deleteEvent(eventId);
+      await deleteEvent(eventId, cmt);
       setEvents(events => events.filter(e => e.id !== eventId));
       showSuccessNotification('Event deleted!');
     } catch {
@@ -124,6 +128,7 @@ export default function AdminDashboardPage() {
     } finally {
       setActionLoading(null);
       setConfirm(null);
+      setComment('');
     }
   };
 
@@ -371,8 +376,8 @@ export default function AdminDashboardPage() {
 
         {/* Confirmation Modal */}
         {confirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
-            <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border border-[#95866A]/30">
               <h2 className="text-lg font-bold mb-2">Are you sure?</h2>
               <p className="mb-4 text-gray-700">
                 {confirm.type === 'deleteUser' && `This will permanently delete the user: ${confirm.name}. This cannot be undone.`}
@@ -380,6 +385,16 @@ export default function AdminDashboardPage() {
                 {confirm.type === 'promote' && `Promote user ${confirm.name} to Organizer?`}
                 {confirm.type === 'revoke' && `Revoke Organizer status from user ${confirm.name}?`}
               </p>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Comment (optional)</label>
+                <textarea
+                  value={comment}
+                  onChange={e => setComment(e.target.value)}
+                  placeholder="Add context for this action..."
+                  className="w-full h-24 resize-none rounded-md border border-gray-300 focus:ring-2 focus:ring-[#95866A] focus:border-[#95866A] p-2 text-sm bg-white/90"
+                />
+                <p className="mt-1 text-xs text-gray-500">Will appear in Audit Logs under Comments.</p>
+              </div>
               <div className="flex gap-3 justify-end">
                 <button
                   className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-medium"
@@ -390,7 +405,7 @@ export default function AdminDashboardPage() {
                 {confirm.type === 'deleteUser' && (
                   <button
                     className="px-4 py-2 rounded bg-red-600 text-white font-medium"
-                    onClick={() => handleDeleteUser(confirm.id!)}
+                    onClick={() => handleDeleteUser(confirm.id!, comment || undefined)}
                   >
                     Delete
                   </button>
@@ -398,7 +413,7 @@ export default function AdminDashboardPage() {
                 {confirm.type === 'deleteEvent' && (
                   <button
                     className="px-4 py-2 rounded bg-red-600 text-white font-medium"
-                    onClick={() => handleDeleteEvent(confirm.id!)}
+                    onClick={() => handleDeleteEvent(confirm.id!, comment || undefined)}
                   >
                     Delete
                   </button>
@@ -406,7 +421,7 @@ export default function AdminDashboardPage() {
                 {confirm.type === 'promote' && (
                   <button
                     className="px-4 py-2 rounded bg-green-600 text-white font-medium"
-                    onClick={() => handlePromote(confirm.id!)}
+                    onClick={() => handlePromote(confirm.id!, comment || undefined)}
                   >
                     Promote
                   </button>
@@ -414,7 +429,7 @@ export default function AdminDashboardPage() {
                 {confirm.type === 'revoke' && (
                   <button
                     className="px-4 py-2 rounded bg-yellow-600 text-white font-medium"
-                    onClick={() => handleRevoke(confirm.id!)}
+                    onClick={() => handleRevoke(confirm.id!, comment || undefined)}
                   >
                     Revoke
                   </button>

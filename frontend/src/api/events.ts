@@ -2,9 +2,6 @@ import { fetchJson } from './client'
 import type { EventOut } from '../types'
 
 export async function createEvent(payload: any, comment?: string): Promise<EventOut> {
-  if (comment === undefined) {
-    comment = window.prompt('Comment for creating event (optional):') || undefined;
-  }
   const url = comment ? `/v1/events/?comment=${encodeURIComponent(comment)}` : `/v1/events/`;
   return fetchJson<EventOut>(url, { method: 'POST', body: JSON.stringify(payload) })
 }
@@ -64,9 +61,6 @@ export async function getEventAttendees(eventId: number): Promise<AttendeeOut[]>
 
 // Delete an event by ID (admin only)
 export async function deleteEvent(eventId: number, comment?: string): Promise<void> {
-  if (comment === undefined) {
-    comment = window.prompt('Comment for deleting event (optional):') || undefined;
-  }
   const url = comment ? `/v1/events/${eventId}?comment=${encodeURIComponent(comment)}` : `/v1/events/${eventId}`;
   await fetchJson(url, { method: 'DELETE' });
 }
