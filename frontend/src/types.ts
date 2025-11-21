@@ -22,4 +22,37 @@ export interface EventOut {
   weekdays?: string[]
   end_date?: string
   parent_id?: number
+  member_count: number
 }
+
+export interface EventMember {
+  user_id: number
+  name: string
+  email: string
+  attendance_count: number
+  is_flagged: boolean
+}
+
+export type SessionOut = {
+  id: number;
+  start_time: string;
+  end_time: string;
+};
+
+export type RecurringGroup = {
+  parent: EventOut;
+  children: SessionOut[];
+  next_session: SessionOut | null;
+  past_sessions: SessionOut[];
+  upcoming_sessions: SessionOut[];
+  total_past_sessions: number;
+};
+
+export type DashboardItem =
+  | { type: "solo"; event: EventOut }
+  | { type: "recurring_group"; group: RecurringGroup };
+
+export type DashboardEventsResponse = {
+  upcoming: DashboardItem[];
+  past: DashboardItem[];
+};

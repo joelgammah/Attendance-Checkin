@@ -33,6 +33,7 @@ from app.models.organization import Organization  # noqa: F401
 from app.models.event import Event  # noqa: F401
 from app.models.attendance import Attendance  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
+from app.models.event_member import EventMember  # noqa: F401
 
 target_metadata = Base.metadata
 

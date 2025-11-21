@@ -6,6 +6,13 @@ export async function createEvent(payload: any): Promise<EventOut> {
 }
 export async function myUpcoming(): Promise<EventOut[]> { return fetchJson(`/v1/events/mine/upcoming`) }
 export async function myPast(): Promise<EventOut[]> { return fetchJson(`/v1/events/mine/past`) }
+
+export async function getDashboardEvents() {
+  return fetchJson('/v1/events/dashboard/events')
+}
+
+
+
 export async function getAllEvents(): Promise<EventOut[]> {
   return fetchJson<EventOut[]>('/v1/events/');
 }

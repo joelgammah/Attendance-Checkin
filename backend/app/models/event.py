@@ -22,7 +22,12 @@ class Event(IDMixin, Base):
     end_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     parent_id: Mapped[int | None] = mapped_column(Integer, default=None)
 
+    #attendance threshold
+    attendance_threshold: Mapped[int | None] = mapped_column(Integer, default=None)
+    
+
     organizer_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     organizer = relationship("User", back_populates="events")
+    members = relationship("EventMember", back_populates="event", cascade="all, delete-orphan")
 
     attendances = relationship("Attendance", back_populates="event", cascade="all, delete-orphan")
