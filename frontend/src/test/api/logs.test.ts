@@ -33,7 +33,7 @@ describe('Logs API functions', () => {
     })
 
     it('fetches audit logs successfully', async () => {
-        const mockLogs = [{ id: 1, action: 'login', user_email: 'test@example.com', timestamp: '2023-01-01T00:00:00Z' }]
+        const mockLogs = [{ id: 1, action: 'login', user_email: 'test@example.com', timestamp: '2023-01-01T00:00:00Z', resource_type: null, resource_id: null, details: '', ip_address: null, comment: null }]
         mockFetch.mockResolvedValueOnce(createMockResponse(mockLogs))
 
         const result = await getAuditLogs()

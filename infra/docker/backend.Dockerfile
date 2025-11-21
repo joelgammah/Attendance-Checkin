@@ -17,13 +17,14 @@ COPY --from=builder /usr/local /usr/local
 COPY backend /app
 # Install gosu to drop privileges and create non-root user
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gosu ca-certificates \
+    && apt-get install -y --no-install-recommends gosu ca-certificates bash \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m -u 1000 -s /bin/bash appuser \
     && chown -R appuser:appuser /app
 
 COPY infra/docker/backend-entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Normalize CRLF -> LF so shebang works inside Linux
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 EXPOSE 8000
 ENTRYPOINT ["/entrypoint.sh"]

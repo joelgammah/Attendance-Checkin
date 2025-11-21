@@ -1,8 +1,9 @@
 import { fetchJson } from './client'
 import type { EventOut } from '../types'
 
-export async function createEvent(payload: any): Promise<EventOut> {
-  return fetchJson<EventOut>(`/v1/events/`, { method: 'POST', body: JSON.stringify(payload) })
+export async function createEvent(payload: any, comment?: string): Promise<EventOut> {
+  const url = comment ? `/v1/events/?comment=${encodeURIComponent(comment)}` : `/v1/events/`;
+  return fetchJson<EventOut>(url, { method: 'POST', body: JSON.stringify(payload) })
 }
 export async function myUpcoming(): Promise<EventOut[]> { return fetchJson(`/v1/events/mine/upcoming`) }
 export async function myPast(): Promise<EventOut[]> { return fetchJson(`/v1/events/mine/past`) }
@@ -59,6 +60,7 @@ export async function getEventAttendees(eventId: number): Promise<AttendeeOut[]>
 }
 
 // Delete an event by ID (admin only)
-export async function deleteEvent(eventId: number): Promise<void> {
-  await fetchJson(`/v1/events/${eventId}`, { method: 'DELETE' });
+export async function deleteEvent(eventId: number, comment?: string): Promise<void> {
+  const url = comment ? `/v1/events/${eventId}?comment=${encodeURIComponent(comment)}` : `/v1/events/${eventId}`;
+  await fetchJson(url, { method: 'DELETE' });
 }

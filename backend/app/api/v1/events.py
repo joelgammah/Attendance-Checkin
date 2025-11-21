@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
 from pydantic import BaseModel, Field
 from typing import List
 from sqlalchemy.orm import Session
@@ -94,6 +94,7 @@ def get_dates_between(start_date: date, end_date: date, weekdays: List[str]) -> 
 @router.post("/", response_model=EventOut)
 def create_event(
     payload: EventCreate,
+    comment: str | None = Query(None, description="Optional admin/organizer comment for audit log"),
     db: Session = Depends(get_db),
     user: User = Depends(require_any_role(UserRole.ORGANIZER, UserRole.ADMIN)),
 ):
@@ -185,7 +186,8 @@ def create_event(
             timestamp=datetime.utcnow(),
             resource_type="event",
             resource_id=str(parent_event.id),
-            details=f"Created event: {parent_event.name}"
+            details=f"Created event: {parent_event.name}",
+            comment=comment
         )
         #returns parent event only for now
         return EventOut(
@@ -545,6 +547,7 @@ def get_event_attendees(event_id: int, db: Session = Depends(get_db), user: User
 @router.delete("/{event_id}")
 def delete_event(
     event_id: int,
+    comment: str | None = Query(None, description="Optional admin/organizer comment for audit log"),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
@@ -565,6 +568,7 @@ def delete_event(
         timestamp=datetime.utcnow(),
         resource_type="event",
         resource_id=str(event.id),
-        details=f"Deleted event: {event.name}"
+        details=f"Deleted event: {event.name}",
+        comment=comment
     )
     return {"detail": "Event deleted"}
