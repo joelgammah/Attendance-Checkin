@@ -6,8 +6,7 @@ def test_my_checkins(client: TestClient, token_organizer: str, token_student: st
     h = {"Authorization": f"Bearer {token_organizer}"}
     now = datetime.now(timezone.utc)
     start = now + timedelta(minutes=10)
-    end = start + timedelta(hours=1)
-    
+        
     # Convert to local time strings (what frontend would send)
     eastern_tz = start.astimezone(timezone(timedelta(hours=-5)))  # EST offset
     start_local = eastern_tz.strftime("%Y-%m-%dT%H:%M")

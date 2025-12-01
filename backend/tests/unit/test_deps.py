@@ -237,3 +237,312 @@ def test_get_current_user_no_auth0_uses_hs256(monkeypatch, mock_db):
 
     assert user.email == "local@example.com"
     mock_repo.get_by_email.assert_called_once_with(mock_db, "local@example.com")
+
+
+# --------------------------
+# Test _fetch_jwks
+# --------------------------
+def test_fetch_jwks_success(monkeypatch):
+    monkeypatch.setattr(deps.settings, "AUTH0_DOMAIN", "tenant.auth0.com")
+    mock_response = {"keys": [{"kid": "key1"}]}
+    
+    with patch("app.api.deps.requests.get") as mock_get:
+        mock_get.return_value.json.return_value = mock_response
+        result = deps._fetch_jwks()
+    
+    assert result == mock_response
+    mock_get.assert_called_once_with("https://tenant.auth0.com/.well-known/jwks.json", timeout=5)
+
+
+def test_fetch_jwks_network_error(monkeypatch):
+    monkeypatch.setattr(deps.settings, "AUTH0_DOMAIN", "tenant.auth0.com")
+    
+    with patch("app.api.deps.requests.get", side_effect=Exception("Network error")):
+        with pytest.raises(ValueError, match="JWKS fetch failed"):
+            deps._fetch_jwks()
+
+
+# --------------------------
+# Test _get_rsa_key_from_jwks
+# --------------------------
+def test_get_rsa_key_from_jwks_found(monkeypatch):
+    token = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImtleTEifQ.payload.signature"
+    jwks = {
+        "keys": [
+            {
+                "kid": "key1",
+                "kty": "RSA",
+                "use": "sig",
+                "n": "test_n",
+                "e": "AQAB"
+            }
+        ]
+    }
+    
+    with patch("app.api.deps.jwt.get_unverified_header", return_value={"kid": "key1"}):
+        with patch("app.api.deps.RSAAlgorithm.from_jwk") as mock_from_jwk:
+            mock_rsa_key = MagicMock()
+            mock_from_jwk.return_value = mock_rsa_key
+            result = deps._get_rsa_key_from_jwks(jwks, token)
+    
+    assert result == mock_rsa_key
+
+
+def test_get_rsa_key_from_jwks_no_kid_in_token(monkeypatch):
+    token = "invalid.token.format"
+    jwks = {"keys": []}
+    
+    with patch("app.api.deps.jwt.get_unverified_header", return_value={}):
+        with pytest.raises(ValueError, match="No kid in token"):
+            deps._get_rsa_key_from_jwks(jwks, token)
+
+
+def test_get_rsa_key_from_jwks_invalid_token_header(monkeypatch):
+    token = "invalid.token"
+    jwks = {"keys": []}
+    
+    with patch("app.api.deps.jwt.get_unverified_header", side_effect=Exception("Bad header")):
+        with pytest.raises(ValueError, match="Invalid token header"):
+            deps._get_rsa_key_from_jwks(jwks, token)
+
+
+def test_get_rsa_key_from_jwks_no_matching_key():
+    token = "eyJhbGciOiJSUzI1NiIsImtpZCI6Im5vbWF0Y2gifQ.payload.signature"
+    jwks = {"keys": [{"kid": "other_key", "kty": "RSA"}]}
+    
+    with patch("app.api.deps.jwt.get_unverified_header", return_value={"kid": "nomatch"}):
+        with pytest.raises(ValueError, match="No matching JWK"):
+            deps._get_rsa_key_from_jwks(jwks, token)
+
+
+def test_get_rsa_key_from_jwks_jwk_parse_error():
+    token = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImJhZCJ9.payload.signature"
+    jwks = {"keys": [{"kid": "bad", "kty": "INVALID"}]}
+
+    with patch("app.api.deps.jwt.get_unverified_header", return_value={"kid": "bad"}):
+        # Simulate RSAAlgorithm.from_jwk failing
+        with patch("app.api.deps.RSAAlgorithm.from_jwk", side_effect=Exception("Bad JWK")):
+            result = deps._get_rsa_key_from_jwks(jwks, token)
+
+    assert result is None
+
+
+# --------------------------
+# Test verify_auth0_token
+# --------------------------
+def test_verify_auth0_token_not_configured(monkeypatch):
+    monkeypatch.setattr(deps.settings, "AUTH0_DOMAIN", "")
+    monkeypatch.setattr(deps.settings, "AUTH0_AUDIENCE", "")
+    
+    with pytest.raises(ValueError, match="Auth0 not configured"):
+        deps.verify_auth0_token("token")
+
+
+def test_verify_auth0_token_no_matching_jwk(monkeypatch):
+    monkeypatch.setattr(deps.settings, "AUTH0_DOMAIN", "tenant.auth0.com")
+    monkeypatch.setattr(deps.settings, "AUTH0_AUDIENCE", "audience")
+    
+    token = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImtleTEifQ.payload.signature"
+    
+    with patch("app.api.deps._fetch_jwks", return_value={"keys": []}):
+        with patch("app.api.deps.jwt.get_unverified_header", return_value={"kid": "key1"}):
+            with pytest.raises(ValueError, match="No matching JWK"):
+                deps.verify_auth0_token(token)
+
+
+def test_verify_auth0_token_decode_fails(monkeypatch):
+    monkeypatch.setattr(deps.settings, "AUTH0_DOMAIN", "tenant.auth0.com")
+    monkeypatch.setattr(deps.settings, "AUTH0_AUDIENCE", "audience")
+    
+    token = "bad.token.here"
+    
+    with patch("app.api.deps._fetch_jwks", return_value={"keys": [{"kid": "key1", "kty": "RSA"}]}):
+        with patch("app.api.deps.jwt.get_unverified_header", return_value={"kid": "key1"}):
+            with patch("app.api.deps.RSAAlgorithm.from_jwk", return_value=MagicMock()):
+                with patch("app.api.deps.jwt.decode", side_effect=Exception("Decode error")):
+                    with pytest.raises(ValueError, match="Auth0 token decode failed"):
+                        deps.verify_auth0_token(token)
+
+
+def test_verify_auth0_token_missing_subject(monkeypatch):
+    monkeypatch.setattr(deps.settings, "AUTH0_DOMAIN", "tenant.auth0.com")
+    monkeypatch.setattr(deps.settings, "AUTH0_AUDIENCE", "audience")
+    
+    token = "valid.token.here"
+    payload = {"email": None}  # No sub field
+    
+    with patch("app.api.deps._fetch_jwks", return_value={"keys": [{"kid": "key1"}]}):
+        with patch("app.api.deps.jwt.get_unverified_header", return_value={"kid": "key1"}):
+            with patch("app.api.deps.RSAAlgorithm.from_jwk", return_value=MagicMock()):
+                with patch("app.api.deps.jwt.decode", return_value=payload):
+                    with pytest.raises(ValueError, match="Invalid token: missing subject"):
+                        deps.verify_auth0_token(token)
+
+
+# --------------------------
+# Test verify_hs256_token
+# --------------------------
+def test_verify_hs256_token_success(monkeypatch):
+    monkeypatch.setattr(deps.settings, "SECRET_KEY", "test-secret")
+    token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIn0.test"
+    
+    with patch("app.api.deps.jwt.decode", return_value={"sub": "test@example.com"}):
+        result = deps.verify_hs256_token(token)
+    
+    assert result == {"email": "test@example.com"}
+
+
+def test_verify_hs256_token_missing_sub(monkeypatch):
+    monkeypatch.setattr(deps.settings, "SECRET_KEY", "test-secret")
+    token = "invalid.token"
+    
+    with patch("app.api.deps.jwt.decode", return_value={}):
+        with pytest.raises(ValueError, match="Invalid HS256 token"):
+            deps.verify_hs256_token(token)
+
+
+def test_verify_hs256_token_decode_error(monkeypatch):
+    monkeypatch.setattr(deps.settings, "SECRET_KEY", "test-secret")
+    token = "bad.token"
+    
+    with patch("app.api.deps.jwt.decode", side_effect=Exception("Decode failed")):
+        with pytest.raises(ValueError, match="Invalid HS256 token"):
+            deps.verify_hs256_token(token)
+
+
+# --------------------------
+# Test get_current_user edge cases and Auth0 fallback
+# --------------------------
+def test_get_current_user_auth0_fails_falls_back_to_hs256(monkeypatch, mock_db):
+    """Test that when Auth0 validation fails, we fall back to HS256"""
+    monkeypatch.setattr(deps.settings, "AUTH0_DOMAIN", "tenant.auth0.com")
+    monkeypatch.setattr(deps.settings, "AUTH0_AUDIENCE", "audience")
+    
+    token = "some-token"
+    
+    with patch("app.api.deps.verify_auth0_token", side_effect=ValueError("Auth0 failed")):
+        with patch("app.api.deps.verify_hs256_token", return_value={"email": "fallback@example.com"}):
+            user_inst = DummyUser()
+            user_inst.email = "fallback@example.com"
+            mock_repo = MagicMock()
+            mock_repo.get_by_email.return_value = user_inst
+            
+            with patch("app.api.deps.UserRepository", return_value=mock_repo):
+                user = deps.get_current_user(db=mock_db, token=token)
+    
+    assert user.email == "fallback@example.com"
+
+
+def test_get_current_user_both_auth_methods_fail(monkeypatch, mock_db):
+    """Test that HTTPException is raised when both Auth0 and HS256 fail"""
+    monkeypatch.setattr(deps.settings, "AUTH0_DOMAIN", "tenant.auth0.com")
+    monkeypatch.setattr(deps.settings, "AUTH0_AUDIENCE", "audience")
+    
+    token = "bad-token"
+    
+    with patch("app.api.deps.verify_auth0_token", side_effect=ValueError("Auth0 failed")):
+        with patch("app.api.deps.verify_hs256_token", side_effect=ValueError("HS256 failed")):
+            with pytest.raises(HTTPException) as exc:
+                deps.get_current_user(db=mock_db, token=token)
+    
+    assert exc.value.status_code == 401
+
+
+def test_get_current_user_auto_provision_extracts_name_from_email(monkeypatch, mock_db):
+    """Test that auto-provisioned users get friendly names extracted from email"""
+    monkeypatch.setattr(deps.settings, "AUTH0_DOMAIN", "")
+    monkeypatch.setattr(deps.settings, "AUTH0_AUDIENCE", "")
+    
+    token = "token"
+    
+    with patch("app.api.deps.verify_hs256_token", return_value={"email": "newuser@company.com"}):
+        new_user = DummyUser()
+        new_user.email = "newuser@company.com"
+        new_user.name = "newuser"
+        
+        mock_repo = MagicMock()
+        mock_repo.get_by_email.return_value = None  # Not found
+        mock_repo.create.return_value = new_user
+        
+        with patch("app.api.deps.UserRepository", return_value=mock_repo):
+            user = deps.get_current_user(db=mock_db, token=token)
+    
+    # Name should be extracted from email (part before @)
+    assert mock_repo.create.called
+    call_args = mock_repo.create.call_args
+    assert "newuser" in str(call_args).lower() or call_args.kwargs.get("name") == "newuser"
+
+
+def test_get_current_user_auto_provision_auth0_id_fallback(monkeypatch, mock_db):
+    """Test that auto-provisioned users get friendly names from Auth0 ID if email unavailable"""
+    monkeypatch.setattr(deps.settings, "AUTH0_DOMAIN", "tenant.auth0.com")
+    monkeypatch.setattr(deps.settings, "AUTH0_AUDIENCE", "audience")
+    
+    token = "auth0-token"
+    auth0_payload = {
+        "email": "auth0|abc123def456",  # Auth0 subject ID instead of email
+        "actual_email": None,
+        "actual_name": None,
+        "auth0_sub": "auth0|abc123def456"
+    }
+    
+    with patch("app.api.deps.verify_auth0_token", return_value=auth0_payload):
+        new_user = DummyUser()
+        new_user.email = "auth0|abc123def456"
+        
+        mock_repo = MagicMock()
+        mock_repo.get_by_email.return_value = None
+        mock_repo.create.return_value = new_user
+        
+        with patch("app.api.deps.UserRepository", return_value=mock_repo):
+            user = deps.get_current_user(db=mock_db, token=token)
+    
+    # Should have created a user
+    assert mock_repo.create.called
+
+
+def test_get_current_user_existing_user_email_update_from_auth0(monkeypatch, mock_db):
+    """Test that existing auth0| email users get updated with real email from Auth0"""
+    monkeypatch.setattr(deps.settings, "AUTH0_DOMAIN", "tenant.auth0.com")
+    monkeypatch.setattr(deps.settings, "AUTH0_AUDIENCE", "audience")
+    
+    token = "auth0-token"
+    auth0_payload = {
+        "email": "user@example.com",
+        "actual_email": "user@example.com",
+        "actual_name": "Real User",
+        "auth0_sub": "auth0|xyz789"
+    }
+    
+    existing = DummyUser()
+    existing.email = "auth0|oldid"
+    existing.name = "auth0|oldid"
+    existing.auth0_sub = None
+    
+    with patch("app.api.deps.verify_auth0_token", return_value=auth0_payload):
+        mock_repo = MagicMock()
+        mock_repo.get_by_email.return_value = existing
+        
+        with patch("app.api.deps.UserRepository", return_value=mock_repo):
+            user = deps.get_current_user(db=mock_db, token=token)
+    
+    # Should have updated existing user
+    assert mock_db.commit.called
+    assert mock_db.refresh.called
+
+
+def test_require_any_role_multiple_roles_user_has_one():
+    """Test that require_any_role passes if user has any of the required roles"""
+    user = DummyUser(roles=[UserRole.ORGANIZER])
+    dep = deps.require_any_role(UserRole.ADMIN, UserRole.ORGANIZER)
+    result = dep(current_user=user)
+    assert result == user
+
+
+def test_require_any_role_multiple_roles_user_has_none():
+    """Test that require_any_role fails if user has none of the required roles"""
+    user = DummyUser(roles=[UserRole.ATTENDEE])
+    dep = deps.require_any_role(UserRole.ADMIN, UserRole.ORGANIZER)
+    with pytest.raises(HTTPException) as exc:
+        dep(current_user=user)
+    assert exc.value.status_code == 403

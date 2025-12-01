@@ -651,6 +651,9 @@ def get_event_family(parent_id: int, db: Session = Depends(get_db)):
     parent = db.get(Event, parent_id)
     if not parent:
         raise HTTPException(404, "Parent event not found")
+    
+    if parent.start_time.tzinfo is None:
+        parent.start_time = parent.start_time.replace(tzinfo=timezone.utc)
 
     # Fetch children
     children = (
@@ -659,6 +662,10 @@ def get_event_family(parent_id: int, db: Session = Depends(get_db)):
         .order_by(Event.start_time)
         .all()
     )
+
+    for child in children:
+        if child.start_time.tzinfo is None:
+            child.start_time = child.start_time.replace(tzinfo=timezone.utc)
 
     past_children = [ev for ev in children if ev.start_time < now]
     upcoming_children = [ev for ev in children if ev.start_time >= now]
@@ -747,43 +754,6 @@ class GroupedEventOut(BaseModel):
     children: List[SessionOut]
 
     model_config = ConfigDict(from_attributes=True)
-
-
-
-@router.get("/grouped", response_model=list[GroupedEventOut])
-def get_grouped_events(
-    db: Session = Depends(get_db),
-    user: User = Depends(require_any_role(UserRole.ORGANIZER, UserRole.ADMIN))
-):
-    # Fetch ONLY recurring parent events
-    parents = (
-        db.query(Event)
-        .filter(Event.parent_id == None, Event.recurring == True)
-        .order_by(Event.start_time)
-        .all()
-    )
-
-    results = []
-
-    for parent in parents:
-        # Fetch children for this parent
-        children = (
-            db.query(Event)
-            .filter(Event.parent_id == parent.id)
-            .order_by(Event.start_time)
-            .all()
-        )
-
-        # Convert to Pydantic using your EventOut-compatible schema
-        results.append(
-            GroupedEventOut(
-                parent=SessionOut.model_validate(parent),
-                children=[SessionOut.model_validate(ch) for ch in children],
-            )
-        )
-
-    return results
-
 
 class DashboardEventsOut(BaseModel):
     upcoming: list

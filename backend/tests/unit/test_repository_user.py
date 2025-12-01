@@ -61,3 +61,9 @@ class TestUserRepository:
         assert fetched is not None
         assert fetched.id == user.id
         assert fetched.email == email
+
+    def test_delete_user(self, db, create_user, repo):
+        user = create_user()
+        assert repo.delete(db, user.id) is True
+        assert repo.delete(db, 999999) is False
+

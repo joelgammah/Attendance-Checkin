@@ -2,11 +2,11 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import '@testing-library/jest-dom'
 
-// Mock dependencies - ADD csvUrl to the mock
+// Mock dependencies
 vi.mock('../api/events', () => ({
-  myUpcoming: vi.fn(),
-  myPast: vi.fn(),
-  csvUrl: vi.fn() // Add this missing mock
+  getDashboardEvents: vi.fn(),
+  downloadAttendanceCsv: vi.fn(),
+  csvUrl: vi.fn()
 }))
 
 vi.mock('../components/Nav', () => ({
@@ -14,35 +14,42 @@ vi.mock('../components/Nav', () => ({
 }))
 
 // Import mocked functions
-import { myUpcoming, myPast, csvUrl } from '../api/events'
+import { getDashboardEvents, downloadAttendanceCsv, csvUrl } from '../api/events'
 
 // Cast to access mock methods
-const mockMyUpcoming = myUpcoming as any
-const mockMyPast = myPast as any
+const mockGetDashboardEvents = getDashboardEvents as any
+const mockDownloadAttendanceCsv = downloadAttendanceCsv as any
 const mockCsvUrl = csvUrl as any
 
 import DashboardPage from '../pages/DashboardPage'
 
+const createDashboardItem = (event: any) => ({ type: 'solo', event })
+
 describe('DashboardPage Coverage Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // Set up csvUrl mock to return a valid URL
     mockCsvUrl.mockReturnValue('/csv/download/1')
   })
 
+  const baseEvent = {
+    notes: null,
+    checkin_open_minutes: 15,
+    recurring: false,
+    weekdays: [],
+    end_date: null,
+    parent_id: null,
+    organizer_name: null,
+    member_count: 0,
+    attendance_threshold: null,
+  }
+
   describe('Loading State Coverage', () => {
     it('shows loading state then transitions to loaded', async () => {
-      // Make API calls resolve after a delay
-      mockMyUpcoming.mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve([]), 100))
-      )
-      mockMyPast.mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve([]), 100))
+      mockGetDashboardEvents.mockImplementation(() => 
+        new Promise(resolve => setTimeout(() => resolve({ upcoming: [], past: [] }), 100))
       )
       
       render(<DashboardPage />)
-
-      // Initially should show loading (wait for Nav to be present to avoid race)
       await waitFor(() => expect(screen.getByTestId('nav')).toBeInTheDocument(), { timeout: 1000 })
     })
   })
@@ -50,23 +57,22 @@ describe('DashboardPage Coverage Tests', () => {
   describe('Success State Coverage', () => {
     it('successfully loads and sets upcoming events', async () => {
       const upcomingEvents = [
-        {
+        createDashboardItem({
           id: 1,
           name: 'Test Event',
           location: 'Test Location',
           start_time: '2024-12-01T10:00:00Z',
           end_time: '2024-12-01T12:00:00Z',
           attendance_count: 5,
-          checkin_token: 'token1'
-        }
+          checkin_token: 'token1',
+          ...baseEvent,
+        })
       ]
       
-      mockMyUpcoming.mockResolvedValue(upcomingEvents)
-      mockMyPast.mockResolvedValue([])
+      mockGetDashboardEvents.mockResolvedValue({ upcoming: upcomingEvents, past: [] })
       
       render(<DashboardPage />)
       
-      // Wait for async operations to complete
       await waitFor(() => {
         expect(screen.getByTestId('nav')).toBeInTheDocument()
       })
@@ -74,19 +80,19 @@ describe('DashboardPage Coverage Tests', () => {
 
     it('successfully loads and sets past events', async () => {
       const pastEvents = [
-        {
+        createDashboardItem({
           id: 1,
           name: 'Past Event',
           location: 'Past Location',
           start_time: '2023-01-01T10:00:00Z',
           end_time: '2023-01-01T12:00:00Z',
           attendance_count: 15,
-          checkin_token: 'past-token'
-        }
+          checkin_token: 'past-token',
+          ...baseEvent,
+        })
       ]
       
-      mockMyUpcoming.mockResolvedValue([])
-      mockMyPast.mockResolvedValue(pastEvents)
+      mockGetDashboardEvents.mockResolvedValue({ upcoming: [], past: pastEvents })
       
       render(<DashboardPage />)
       
@@ -96,11 +102,28 @@ describe('DashboardPage Coverage Tests', () => {
     })
 
     it('successfully loads both upcoming and past events', async () => {
-      const upcomingEvents = [{ id: 1, name: 'Upcoming', start_time: '2024-12-01T10:00:00Z', checkin_token: 'token1' }]
-      const pastEvents = [{ id: 2, name: 'Past', start_time: '2023-01-01T10:00:00Z', checkin_token: 'token2' }]
+      const upcomingEvents = [createDashboardItem({
+        id: 1,
+        name: 'Upcoming',
+        start_time: '2024-12-01T10:00:00Z',
+        end_time: '2024-12-01T12:00:00Z',
+        checkin_token: 'token1',
+        location: 'Location',
+        attendance_count: 0,
+        ...baseEvent,
+      })]
+      const pastEvents = [createDashboardItem({
+        id: 2,
+        name: 'Past',
+        start_time: '2023-01-01T10:00:00Z',
+        end_time: '2023-01-01T12:00:00Z',
+        checkin_token: 'token2',
+        location: 'Location',
+        attendance_count: 0,
+        ...baseEvent,
+      })]
       
-      mockMyUpcoming.mockResolvedValue(upcomingEvents)
-      mockMyPast.mockResolvedValue(pastEvents)
+      mockGetDashboardEvents.mockResolvedValue({ upcoming: upcomingEvents, past: pastEvents })
       
       render(<DashboardPage />)
       
@@ -111,21 +134,8 @@ describe('DashboardPage Coverage Tests', () => {
   })
 
   describe('Error Handling Coverage', () => {
-    it('handles myUpcoming API error and continues', async () => {
-      mockMyUpcoming.mockRejectedValue(new Error('Upcoming API failed'))
-      mockMyPast.mockResolvedValue([])
-      
-      render(<DashboardPage />)
-      
-      // Wait for error handling to complete
-      await waitFor(() => {
-        expect(screen.getByTestId('nav')).toBeInTheDocument()
-      })
-    })
-
-    it('handles myPast API error and continues', async () => {
-      mockMyUpcoming.mockResolvedValue([])
-      mockMyPast.mockRejectedValue(new Error('Past API failed'))
+    it('handles API error and continues', async () => {
+      mockGetDashboardEvents.mockRejectedValue(new Error('API failed'))
       
       render(<DashboardPage />)
       
@@ -134,9 +144,18 @@ describe('DashboardPage Coverage Tests', () => {
       })
     })
 
-    it('handles both API errors and still finishes loading', async () => {
-      mockMyUpcoming.mockRejectedValue(new Error('Upcoming failed'))
-      mockMyPast.mockRejectedValue(new Error('Past failed'))
+    it('handles API error continues', async () => {
+      mockGetDashboardEvents.mockRejectedValue(new Error('API failed'))
+      
+      render(<DashboardPage />)
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('nav')).toBeInTheDocument()
+      })
+    })
+
+    it('handles API errors and still finishes loading', async () => {
+      mockGetDashboardEvents.mockRejectedValue(new Error('API failed'))
       
       render(<DashboardPage />)
       
@@ -146,8 +165,7 @@ describe('DashboardPage Coverage Tests', () => {
     })
 
     it('handles API errors with specific error types', async () => {
-      mockMyUpcoming.mockRejectedValue(new TypeError('Network error'))
-      mockMyPast.mockRejectedValue(new ReferenceError('Reference error'))
+      mockGetDashboardEvents.mockRejectedValue(new TypeError('Network error'))
       
       render(<DashboardPage />)
       
@@ -157,10 +175,7 @@ describe('DashboardPage Coverage Tests', () => {
     })
 
     it('handles API timeout scenarios', async () => {
-      mockMyUpcoming.mockImplementation(() => 
-        Promise.reject(new Error('Request timeout'))
-      )
-      mockMyPast.mockImplementation(() => 
+      mockGetDashboardEvents.mockImplementation(() => 
         Promise.reject(new Error('Request timeout'))
       )
       
@@ -174,32 +189,27 @@ describe('DashboardPage Coverage Tests', () => {
 
   describe('Finally Block Coverage', () => {
     it('always sets loading to false - success case', async () => {
-      mockMyUpcoming.mockResolvedValue([])
-      mockMyPast.mockResolvedValue([])
+      mockGetDashboardEvents.mockResolvedValue({ upcoming: [], past: [] })
       
       render(<DashboardPage />)
       
-      // The finally block should always execute
       await waitFor(() => {
         expect(screen.getByTestId('nav')).toBeInTheDocument()
       })
     })
 
     it('always sets loading to false - error case', async () => {
-      mockMyUpcoming.mockRejectedValue(new Error('Failed'))
-      mockMyPast.mockRejectedValue(new Error('Failed'))
+      mockGetDashboardEvents.mockRejectedValue(new Error('Failed'))
       
       render(<DashboardPage />)
       
-      // The finally block should execute even on error
       await waitFor(() => {
         expect(screen.getByTestId('nav')).toBeInTheDocument()
       })
     })
 
     it('always sets loading to false - mixed case', async () => {
-      mockMyUpcoming.mockResolvedValue([])
-      mockMyPast.mockRejectedValue(new Error('Failed'))
+      mockGetDashboardEvents.mockRejectedValue(new Error('Failed'))
       
       render(<DashboardPage />)
       
@@ -211,8 +221,7 @@ describe('DashboardPage Coverage Tests', () => {
 
   describe('State Update Coverage', () => {
     it('updates state with empty arrays', async () => {
-      mockMyUpcoming.mockResolvedValue([])
-      mockMyPast.mockResolvedValue([])
+      mockGetDashboardEvents.mockResolvedValue({ upcoming: [], past: [] })
       
       render(<DashboardPage />)
       
@@ -222,22 +231,33 @@ describe('DashboardPage Coverage Tests', () => {
     })
 
     it('updates state with large datasets', async () => {
-      const manyUpcoming = Array.from({ length: 20 }, (_, i) => ({
-        id: i + 1,
-        name: `Event ${i + 1}`,
-        start_time: '2024-12-01T10:00:00Z',
-        checkin_token: `token-${i + 1}`
-      }))
+      const manyUpcoming = Array.from({ length: 20 }, (_, i) => 
+        createDashboardItem({
+          id: i + 1,
+          name: `Event ${i + 1}`,
+          start_time: '2024-12-01T10:00:00Z',
+          end_time: '2024-12-01T12:00:00Z',
+          checkin_token: `token-${i + 1}`,
+          location: 'Location',
+          attendance_count: 0,
+          ...baseEvent,
+        })
+      )
       
-      const manyPast = Array.from({ length: 15 }, (_, i) => ({
-        id: i + 100,
-        name: `Past Event ${i + 1}`,
-        start_time: '2023-01-01T10:00:00Z',
-        checkin_token: `past-token-${i + 1}`
-      }))
+      const manyPast = Array.from({ length: 15 }, (_, i) => 
+        createDashboardItem({
+          id: i + 100,
+          name: `Past Event ${i + 1}`,
+          start_time: '2023-01-01T10:00:00Z',
+          end_time: '2023-01-01T12:00:00Z',
+          checkin_token: `past-token-${i + 1}`,
+          location: 'Location',
+          attendance_count: 0,
+          ...baseEvent,
+        })
+      )
       
-      mockMyUpcoming.mockResolvedValue(manyUpcoming)
-      mockMyPast.mockResolvedValue(manyPast)
+      mockGetDashboardEvents.mockResolvedValue({ upcoming: manyUpcoming, past: manyPast })
       
       render(<DashboardPage />)
       
@@ -246,15 +266,31 @@ describe('DashboardPage Coverage Tests', () => {
       })
     })
 
-    // REMOVED the malformed data test that was causing null errors
     it('updates state with valid minimal data', async () => {
       const minimalData = [
-        { id: 1, name: 'Valid Event', start_time: '2024-01-01T10:00:00Z', checkin_token: 'token1' },
-        { id: 2, name: 'Another Valid Event', start_time: '2024-01-02T10:00:00Z', checkin_token: 'token2' }
+        createDashboardItem({
+          id: 1,
+          name: 'Valid Event',
+          start_time: '2024-01-01T10:00:00Z',
+          end_time: '2024-01-01T12:00:00Z',
+          checkin_token: 'token1',
+          location: 'Location',
+          attendance_count: 0,
+          ...baseEvent,
+        }),
+        createDashboardItem({
+          id: 2,
+          name: 'Another Valid Event',
+          start_time: '2024-01-02T10:00:00Z',
+          end_time: '2024-01-02T12:00:00Z',
+          checkin_token: 'token2',
+          location: 'Location',
+          attendance_count: 0,
+          ...baseEvent,
+        })
       ]
       
-      mockMyUpcoming.mockResolvedValue(minimalData)
-      mockMyPast.mockResolvedValue(minimalData)
+      mockGetDashboardEvents.mockResolvedValue({ upcoming: minimalData, past: minimalData })
       
       render(<DashboardPage />)
       
@@ -266,8 +302,7 @@ describe('DashboardPage Coverage Tests', () => {
 
   describe('Component Lifecycle Coverage', () => {
     it('handles multiple re-renders', async () => {
-      mockMyUpcoming.mockResolvedValue([])
-      mockMyPast.mockResolvedValue([])
+      mockGetDashboardEvents.mockResolvedValue({ upcoming: [], past: [] })
       
       const { rerender } = render(<DashboardPage />)
       
@@ -275,7 +310,6 @@ describe('DashboardPage Coverage Tests', () => {
         expect(screen.getByTestId('nav')).toBeInTheDocument()
       })
       
-      // Force re-render to test component stability
       rerender(<DashboardPage />)
       
       await waitFor(() => {
@@ -284,16 +318,12 @@ describe('DashboardPage Coverage Tests', () => {
     })
 
     it('handles unmounting during async operations', async () => {
-      mockMyUpcoming.mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve([]), 500))
-      )
-      mockMyPast.mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve([]), 500))
+      mockGetDashboardEvents.mockImplementation(() => 
+        new Promise(resolve => setTimeout(() => resolve({ upcoming: [], past: [] }), 500))
       )
       
       const { unmount } = render(<DashboardPage />)
       
-      // Unmount before async operations complete
       setTimeout(() => unmount(), 100)
     })
   })
@@ -301,19 +331,19 @@ describe('DashboardPage Coverage Tests', () => {
   describe('Event Rendering Coverage', () => {
     it('renders events with complete data', async () => {
       const completeEvents = [
-        {
+        createDashboardItem({
           id: 1,
           name: 'Complete Event',
           location: 'Complete Location',
           start_time: '2024-12-01T10:00:00Z',
           end_time: '2024-12-01T12:00:00Z',
           attendance_count: 10,
-          checkin_token: 'complete-token'
-        }
+          checkin_token: 'complete-token',
+          ...baseEvent,
+        })
       ]
       
-      mockMyUpcoming.mockResolvedValue(completeEvents)
-      mockMyPast.mockResolvedValue(completeEvents)
+      mockGetDashboardEvents.mockResolvedValue({ upcoming: completeEvents, past: completeEvents })
       
       render(<DashboardPage />)
       
@@ -324,19 +354,19 @@ describe('DashboardPage Coverage Tests', () => {
 
     it('renders events with zero attendance', async () => {
       const zeroAttendanceEvents = [
-        {
+        createDashboardItem({
           id: 1,
           name: 'Zero Attendance Event',
           location: 'Location',
           start_time: '2024-12-01T10:00:00Z',
           end_time: '2024-12-01T12:00:00Z',
           attendance_count: 0,
-          checkin_token: 'zero-token'
-        }
+          checkin_token: 'zero-token',
+          ...baseEvent,
+        })
       ]
       
-      mockMyUpcoming.mockResolvedValue(zeroAttendanceEvents)
-      mockMyPast.mockResolvedValue([])
+      mockGetDashboardEvents.mockResolvedValue({ upcoming: zeroAttendanceEvents, past: [] })
       
       render(<DashboardPage />)
       
@@ -345,54 +375,51 @@ describe('DashboardPage Coverage Tests', () => {
       })
     })
 
-    it('shows "Check In ended" for past events', async () => {
+    it('shows "Check-in ended" for past events', async () => {
       const pastEvents = [
-        {
+        createDashboardItem({
           id: 1,
           name: 'Past Event',
           location: 'Location',
           start_time: '2023-01-01T10:00:00Z',
           end_time: '2023-01-01T12:00:00Z',
           attendance_count: 5,
-          checkin_token: 'past-token'
-        }
+          checkin_token: 'past-token',
+          ...baseEvent,
+        })
       ]
       
-      mockMyUpcoming.mockResolvedValue([])
-      mockMyPast.mockResolvedValue(pastEvents)
+      mockGetDashboardEvents.mockResolvedValue({ upcoming: [], past: pastEvents })
       
       render(<DashboardPage />)
-      
       await waitFor(() => {
         expect(screen.getByTestId('nav')).toBeInTheDocument()
-        // The "Check In ended" text should be present for past events
-        expect(screen.getByText('Check In ended')).toBeInTheDocument()
-      })
+        expect(screen.getByText('Check-in ended')).toBeInTheDocument()
+      }, { timeout: 2000 })
     })
 
     it('shows "Show QR" for future events', async () => {
       const futureEvents = [
-        {
+        createDashboardItem({
           id: 1,
           name: 'Future Event',
           location: 'Location',
           start_time: '2026-01-01T10:00:00Z',
           end_time: '2026-01-01T12:00:00Z',
           attendance_count: 0,
-          checkin_token: 'future-token'
-        }
+          checkin_token: 'future-token',
+          ...baseEvent,
+        })
       ]
       
-      mockMyUpcoming.mockResolvedValue(futureEvents)
-      mockMyPast.mockResolvedValue([])
+      mockGetDashboardEvents.mockResolvedValue({ upcoming: futureEvents, past: [] })
       
       render(<DashboardPage />)
       
       await waitFor(() => {
         expect(screen.getByTestId('nav')).toBeInTheDocument()
-        // The "Show QR" text should be present for future events
         expect(screen.getByText('Show QR')).toBeInTheDocument()
-      })
+      }, { timeout: 2000 })
     })
   })
 })
