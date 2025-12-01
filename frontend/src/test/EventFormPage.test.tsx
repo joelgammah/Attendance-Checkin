@@ -151,7 +151,9 @@ describe('EventFormPage', () => {
         timezone: 'America/New_York',
         end_date: '',
         recurring: false,
-        weekdays: []
+        weekdays: [],
+        attendance_threshold: null,   // NEW
+        member_ids: [] 
       })
     })
     
@@ -237,7 +239,9 @@ describe('EventFormPage', () => {
         timezone: 'America/New_York',
         end_date: '',
         recurring: false,
-        weekdays: []
+        weekdays: [],
+        attendance_threshold: null,   // NEW
+        member_ids: [] 
       })
     })
   })

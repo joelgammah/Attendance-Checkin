@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+
 from typing import List
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta, date
@@ -12,15 +13,19 @@ from app.repositories.audit_log_repo import AuditLogRepository
 from app.models.user import UserRole, User
 from app.repositories.event_repo import EventRepository
 from app.repositories.attendance_repo import AttendanceRepository
+from app.repositories.event_member_repo import EventMemberRepository
+
 from app.models.event import Event
 from app.models.attendance import Attendance
 from app.core.config import settings
+from app.models.event_member import EventMember
 
 
 router = APIRouter()
 
 event_repo = EventRepository()
 att_repo = AttendanceRepository()
+event_member_repo = EventMemberRepository()
 
 
 def serialize_datetime(dt: datetime) -> str:
@@ -47,6 +52,8 @@ class EventCreate(BaseModel):
     weekdays: List[str] | None = None
     end_date: str | None = None
     parent_id: int | None = None
+    attendance_threshold: int | None = None
+    member_ids: List[int] | None = None  # New field for event members
 
 class EventOut(BaseModel):
     id: int
@@ -64,9 +71,45 @@ class EventOut(BaseModel):
     end_date: str | None = None
     parent_id: int | None = None
     organizer_name: str | None = None
+    attendance_threshold: int | None = None
+    member_count: int = 0
+
 
     class Config:
         from_attributes = True
+
+class SessionOut(BaseModel):
+    id: int
+    start_time: datetime
+    end_time: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class SessionListOut(BaseModel):
+    id: int
+    start_time: str
+    end_time: str
+    checkin_token: str
+
+
+class MemberAttendanceOut(BaseModel):
+    user_id: int
+    name: str
+    email: str
+    attended: int
+    missed: int
+    is_flagged: bool
+
+class EventFamilyOut(BaseModel):
+    parent: EventOut
+    past_children: list[SessionListOut]
+    upcoming_children: list[SessionListOut]
+    members: list[MemberAttendanceOut]
+    total_past_sessions: int
+
+    class Config:
+        from_attributes = True
+
 
 def get_dates_between(start_date: date, end_date: date, weekdays: List[str]) -> List[date]:
     """Helper function to get all dates between start and end that match given weekdays"""
@@ -144,7 +187,19 @@ def create_event(
             parent_id=None
 
         )
+        if payload.attendance_threshold is not None:
+            parent_event.attendance_threshold = payload.attendance_threshold
+        
         db.flush()
+
+        # Add event members if provided
+        if payload.member_ids:
+            for member_id in payload.member_ids:
+                event_member_repo.add_member(
+                    db,
+                    parent_event.id,
+                    member_id
+                )
 
         if payload.recurring and payload.weekdays and payload.end_date:
             # Create recurring events
@@ -162,7 +217,7 @@ def create_event(
                     print(f"Creating recurring event on {rd} (local={new_start_local}, utc={new_start_utc})")
 
 
-                    event_repo.create(
+                    child_event = event_repo.create(
                         db,
                         name=payload.name,
                         location=payload.location,
@@ -177,8 +232,23 @@ def create_event(
                         end_date=end_date_utc,
                         parent_id=parent_event.id  # Link to parent event
                     )
+
+                    if payload.attendance_threshold is not None:
+                        child_event.attendance_threshold = payload.attendance_threshold
+
+                    db.flush()
+
+                    # Add event members to child event
+                    if payload.member_ids:
+                        for member_id in payload.member_ids:
+                            event_member_repo.add_member(
+                                db,
+                                child_event.id,
+                                member_id
+                            )
         db.commit()
         db.refresh(parent_event)
+
         AuditLogRepository.log_audit(
             db,
             action="create_event",
@@ -203,7 +273,8 @@ def create_event(
             recurring=parent_event.recurring,
             weekdays=parent_event.weekdays,
             end_date=serialize_datetime(parent_event.end_date) if parent_event.end_date else None,
-            parent_id=parent_event.parent_id
+            parent_id=parent_event.parent_id,
+            member_count=len(event_member_repo.list_members(db, parent_event.id))
         )
 
     except ValueError as e:
@@ -572,3 +643,579 @@ def delete_event(
         comment=comment
     )
     return {"detail": "Event deleted"}
+
+@router.get("/{parent_id}/family", response_model=EventFamilyOut)
+def get_event_family(parent_id: int, db: Session = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+
+    parent = db.get(Event, parent_id)
+    if not parent:
+        raise HTTPException(404, "Parent event not found")
+    
+    if parent.start_time.tzinfo is None:
+        parent.start_time = parent.start_time.replace(tzinfo=timezone.utc)
+
+    # Fetch children
+    children = (
+        db.query(Event)
+        .filter(Event.parent_id == parent_id)
+        .order_by(Event.start_time)
+        .all()
+    )
+
+    for child in children:
+        if child.start_time.tzinfo is None:
+            child.start_time = child.start_time.replace(tzinfo=timezone.utc)
+
+    past_children = [ev for ev in children if ev.start_time < now]
+    upcoming_children = [ev for ev in children if ev.start_time >= now]
+
+    # Count total past sessions (parent counts as one if in the past)
+    total_past_sessions = len(past_children)
+    if parent.start_time < now:
+        total_past_sessions += 1
+
+    # Get parent members
+    members = event_member_repo.list_members_for_parent(db, parent_id)
+
+    member_summaries = []
+    for m in members:
+        attended = event_member_repo.get_member_attendance_count(
+            db, parent_id, m.user_id
+        )
+
+        missed = max(total_past_sessions - attended, 0)
+
+        is_flagged = (
+            parent.attendance_threshold is not None
+            and missed > parent.attendance_threshold
+        )
+
+        member_summaries.append(MemberAttendanceOut(
+            user_id=m.user_id,
+            name=m.user.name,
+            email=m.user.email,
+            attended=attended,
+            missed=missed,
+            is_flagged=is_flagged
+        ))
+
+    # ---- FULL EventOut serialization for parent ----
+    parent_out = EventOut(
+        id=parent.id,
+        name=parent.name,
+        location=parent.location,
+        start_time=serialize_datetime(parent.start_time),
+        end_time=serialize_datetime(parent.end_time),
+        notes=parent.notes,
+        checkin_open_minutes=parent.checkin_open_minutes,
+        checkin_token=parent.checkin_token,
+        attendance_count = att_repo.count_for_event(db, parent.id),      
+        recurring=parent.recurring,
+        weekdays=parent.weekdays,
+        end_date=serialize_datetime(parent.end_date) if parent.end_date else None,
+        parent_id=parent.parent_id,
+        organizer_name=parent.organizer.name if parent.organizer else None,
+        attendance_threshold=parent.attendance_threshold,
+        member_count=len(members)
+    )
+
+    # ---- SessionOut for children ----
+    past_children_out = [
+        SessionListOut(
+            id=ev.id,
+            start_time=serialize_datetime(ev.start_time),
+            end_time=serialize_datetime(ev.end_time),
+            checkin_token=ev.checkin_token
+        ) for ev in past_children
+    ]
+
+    upcoming_children_out = [
+        SessionListOut(
+            id=ev.id,
+            start_time=serialize_datetime(ev.start_time),
+            end_time=serialize_datetime(ev.end_time),
+            checkin_token=ev.checkin_token
+        ) for ev in upcoming_children
+    ]
+
+    # Return final response
+    return EventFamilyOut(
+        parent=parent_out,
+        past_children=past_children_out,
+        upcoming_children=upcoming_children_out,
+        members=member_summaries,
+        total_past_sessions=total_past_sessions
+    )
+
+
+class GroupedEventOut(BaseModel):
+    parent: SessionOut
+    children: List[SessionOut]
+
+    model_config = ConfigDict(from_attributes=True)
+
+class DashboardEventsOut(BaseModel):
+    upcoming: list
+    past: list
+
+class DashboardSoloEvent(BaseModel):
+    type: str = "solo"
+    event: EventOut
+
+class RecurringGroupOut(BaseModel):
+    parent: EventOut
+    children: list[SessionOut]
+    next_session: SessionOut | None
+    past_sessions: list[SessionOut]
+    upcoming_sessions: list[SessionOut]
+    total_past_sessions: int
+
+class DashboardRecurringGroup(BaseModel):
+    type: str = "recurring_group"
+    group: RecurringGroupOut
+
+@router.get("/dashboard/events", response_model=DashboardEventsOut)
+def get_dashboard_events(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_any_role(UserRole.ORGANIZER, UserRole.ADMIN)),
+):
+    now = datetime.now(timezone.utc)
+
+    # ----------------------------------------
+    # 1. Fetch solo parents (not recurring)
+    # ----------------------------------------
+    solo_events = (
+        db.query(Event)
+        .filter(
+            Event.organizer_id == user.id,
+            Event.parent_id == None,
+            Event.recurring == False,
+        )
+        .order_by(Event.start_time)
+        .all()
+    )
+
+    # ----------------------------------------
+    # 2. Fetch recurring parents
+    # ----------------------------------------
+    recurring_parents = (
+        db.query(Event)
+        .filter(
+            Event.organizer_id == user.id,
+            Event.parent_id == None,
+            Event.recurring == True,
+        )
+        .order_by(Event.start_time)
+        .all()
+    )
+
+    # ----------------------------------------
+    # Prepare output buckets
+    # ----------------------------------------
+    upcoming_list = []
+    past_list = []
+
+    # ----------------------------------------
+    # 3. Process solo events
+    # ----------------------------------------
+    for ev in solo_events:
+        wrapped = DashboardSoloEvent(
+            event=EventOut(
+                id=ev.id,
+                name=ev.name,
+                location=ev.location,
+                start_time=serialize_datetime(ev.start_time),
+                end_time=serialize_datetime(ev.end_time),
+                notes=ev.notes,
+                checkin_open_minutes=ev.checkin_open_minutes,
+                checkin_token=ev.checkin_token,
+                attendance_count=att_repo.count_for_event(db, ev.id),
+                recurring=ev.recurring,
+                weekdays=ev.weekdays,
+                end_date=serialize_datetime(ev.end_date) if ev.end_date else None,
+                parent_id=ev.parent_id,
+                member_count=len(event_member_repo.list_members(db, ev.id))
+            )
+        )
+
+        if ev.start_time >= now:
+            upcoming_list.append(wrapped)
+        else:
+            past_list.append(wrapped)
+
+    # ----------------------------------------
+    # 4. Process recurring groups
+    # ----------------------------------------
+    for parent in recurring_parents:
+
+        children = (
+            db.query(Event)
+            .filter(Event.parent_id == parent.id)
+            .order_by(Event.start_time)
+            .all()
+        )
+
+        # Convert children → SessionOut list
+        children_out = [SessionOut.model_validate(ch) for ch in children]
+
+        # Split by time
+        past_children = [ch for ch in children if ch.start_time < now]
+        upcoming_children = [ch for ch in children if ch.start_time >= now]
+
+        # Total past sessions includes parent session
+        total_past_sessions = len(past_children)
+        if parent.start_time < now:
+            total_past_sessions += 1
+
+        # --------------------------------------------------
+        # New correct next-session logic (parent + children)
+        # --------------------------------------------------
+
+        # Combine parent + children as raw Event models
+        all_sessions = [parent] + children
+
+        # Sort by start time
+        all_sorted = sorted(all_sessions, key=lambda e: e.start_time)
+
+        # 1. Check for a currently active session
+        active_raw = next(
+            (ev for ev in all_sorted if ev.start_time <= now <= ev.end_time),
+            None
+        )
+
+        if active_raw:
+            next_session_raw = active_raw
+        else:
+            # 2. First session in the future
+            next_session_raw = next(
+                (ev for ev in all_sorted if ev.start_time >= now),
+                None
+            )
+
+        # Convert to SessionOut
+        next_session = (
+            SessionOut(
+                id=next_session_raw.id,
+                start_time=serialize_datetime(next_session_raw.start_time),
+                end_time=serialize_datetime(next_session_raw.end_time),
+            )
+            if next_session_raw else None
+        )
+
+
+        group = RecurringGroupOut(
+            parent=EventOut(
+                id=parent.id,
+                name=parent.name,
+                location=parent.location,
+                start_time=serialize_datetime(parent.start_time),
+                end_time=serialize_datetime(parent.end_time),
+                notes=parent.notes,
+                checkin_open_minutes=parent.checkin_open_minutes,
+                checkin_token=parent.checkin_token,
+                attendance_count=att_repo.count_for_event(db, parent.id),
+                recurring=parent.recurring,
+                weekdays=parent.weekdays,
+                end_date=serialize_datetime(parent.end_date) if parent.end_date else None,
+                parent_id=parent.parent_id,
+                member_count=len(event_member_repo.list_members(db, parent.id)),
+                attendance_threshold=parent.attendance_threshold
+            ),
+            children=children_out,
+            next_session=next_session,
+            past_sessions=[SessionOut.model_validate(ch) for ch in past_children],
+            upcoming_sessions=[SessionOut.model_validate(ch) for ch in upcoming_children],
+            total_past_sessions=total_past_sessions
+        )
+
+        wrapped = DashboardRecurringGroup(group=group)
+
+        # Classification:
+        # - If there is any upcoming child → upcoming
+        # - If not, the whole series is past
+        if upcoming_children:
+            upcoming_list.append(wrapped)
+        else:
+            past_list.append(wrapped)
+
+    # ----------------------------------------
+    # Final output
+    # ----------------------------------------
+    return DashboardEventsOut(
+        upcoming=upcoming_list,
+        past=past_list
+    )
+
+
+class MyEventSummary(BaseModel):
+    parent: EventOut
+    next_session: SessionOut | None
+    attended: int
+    missed: int
+    flagged: bool
+    total_past_sessions: int
+
+    class Config:
+        from_attributes = True
+
+class MyEventsOut(BaseModel):
+    events: list[MyEventSummary]
+
+@router.get("/attendee/my-events", response_model=MyEventsOut)
+def get_my_events(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_any_role(UserRole.ATTENDEE, UserRole.ORGANIZER, UserRole.ADMIN)),
+):
+    now = datetime.now(timezone.utc)
+
+    # 1. Get ALL event_members rows for this user
+    memberships = event_member_repo.get_events_for_user(db, user.id)
+    if not memberships:
+        return MyEventsOut(events=[])
+
+    results = []
+
+    for mem in memberships:
+        event = db.get(Event, mem.event_id)
+
+        # Skip solo events or child events
+        if not event or not event.recurring or event.parent_id is not None:
+            continue
+
+        parent = event
+
+        # -----------------------------
+        # Load children
+        # -----------------------------
+        children = (
+            db.query(Event)
+            .filter(Event.parent_id == parent.id)
+            .order_by(Event.start_time)
+            .all()
+        )
+
+        children_out = [SessionOut.model_validate(c) for c in children]
+
+        # -----------------------------
+        # Past / upcoming
+        # -----------------------------
+        past_children = [c for c in children if c.start_time < now]
+        upcoming_children = [c for c in children if c.start_time >= now]
+
+        total_past_sessions = len(past_children)
+        if parent.start_time < now:
+            total_past_sessions += 1
+
+        # Attendance for THIS user
+        attended_count = event_member_repo.get_member_attendance_count(
+            db, parent.id, user.id
+        )
+        missed_count = max(total_past_sessions - attended_count, 0)
+
+        flagged = (
+            parent.attendance_threshold is not None
+            and missed_count > parent.attendance_threshold
+        )
+
+        # -----------------------------
+        # Next session logic
+        # -----------------------------
+        next_session_raw = None
+
+        if parent.start_time >= now:
+            next_session_raw = parent
+        elif upcoming_children:
+            next_session_raw = upcoming_children[0]
+
+        next_session = (
+            SessionOut.model_validate(next_session_raw)
+            if next_session_raw else None
+        )
+
+        # -----------------------------
+        # Construct EventOut manually
+        # -----------------------------
+        parent_out = EventOut(
+            id=parent.id,
+            name=parent.name,
+            location=parent.location,
+            start_time=serialize_datetime(parent.start_time),
+            end_time=serialize_datetime(parent.end_time),
+            notes=parent.notes,
+            checkin_open_minutes=parent.checkin_open_minutes,
+            checkin_token=parent.checkin_token,
+            attendance_count=att_repo.count_for_event(db, parent.id),
+            recurring=parent.recurring,
+            weekdays=parent.weekdays,
+            end_date=serialize_datetime(parent.end_date) if parent.end_date else None,
+            parent_id=parent.parent_id,
+            member_count=len(event_member_repo.list_members(db, parent.id)),
+            attendance_threshold=parent.attendance_threshold
+        )
+
+        results.append(
+            MyEventSummary(
+                parent=parent_out,
+                next_session=next_session,
+                attended=attended_count,
+                missed=missed_count,
+                flagged=flagged,
+                total_past_sessions=total_past_sessions
+            )
+        )
+
+    return MyEventsOut(events=results)
+
+class SessionWithAttendanceOut(BaseModel):
+    session: SessionOut
+    attended: bool
+
+
+class MyEventDetails(BaseModel):
+    parent: EventOut
+    attended: int
+    missed: int
+    flagged: bool
+    total_past_sessions: int
+    next_session: SessionOut | None
+    past_sessions: list[SessionWithAttendanceOut]
+    upcoming_sessions: list[SessionWithAttendanceOut]
+
+
+
+@router.get("/attendee/event/{parent_id}", response_model=MyEventDetails)
+def get_attendee_event_details(
+    parent_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_any_role(UserRole.ATTENDEE, UserRole.ORGANIZER, UserRole.ADMIN)),
+):
+    now = datetime.now(timezone.utc)
+
+    parent = db.get(Event, parent_id)
+    if not parent:
+        raise HTTPException(404, "Event not found")
+
+    if not parent.recurring or parent.parent_id is not None:
+        raise HTTPException(400, "Not a recurring parent event")
+
+    # Confirm membership
+    membership = (
+        db.query(EventMember)
+        .filter(EventMember.user_id == user.id, EventMember.event_id == parent_id)
+        .first()
+    )
+    if not membership:
+        raise HTTPException(403, "Not a member of this event")
+
+    # -----------------------------------------------------------
+    # Load child sessions
+    # -----------------------------------------------------------
+    children = (
+        db.query(Event)
+        .filter(Event.parent_id == parent.id)
+        .order_by(Event.start_time)
+        .all()
+    )
+
+    # Helper for SessionOut
+    def make_session_out(e: Event) -> SessionOut:
+        return SessionOut(
+            id=e.id,
+            start_time=serialize_datetime(e.start_time),
+            end_time=serialize_datetime(e.end_time),
+            location=e.location,
+            token=e.checkin_token,
+        )
+
+    # Helper: Did user attend this event?
+    def did_attend(e: Event) -> bool:
+        return att_repo.get_by_event_and_user(db, e.id, user.id) is not None
+
+
+    # -----------------------------------------------------------
+    # Convert children → SessionWithAttendanceOut
+    # -----------------------------------------------------------
+    wrapped_children: list[SessionWithAttendanceOut] = []
+    for c in children:
+        wrapped_children.append(
+            SessionWithAttendanceOut(
+                session=make_session_out(c),
+                attended=did_attend(c)
+            )
+        )
+
+    # -----------------------------------------------------------
+    # Split past/upcoming
+    # -----------------------------------------------------------
+    past_sessions = [
+        w for w in wrapped_children
+        if w.session.start_time < now
+    ]
+
+    upcoming_sessions = [
+        w for w in wrapped_children
+        if w.session.start_time >= now
+    ]
+
+    # -----------------------------------------------------------
+    # Attendance counts across the entire series
+    # -----------------------------------------------------------
+    total_past_sessions = len(past_sessions)
+    if parent.start_time < now:
+        total_past_sessions += 1  # parent session counts as first
+
+    attended_count = event_member_repo.get_member_attendance_count(
+        db, parent.id, user.id
+    )
+
+    missed_count = max(total_past_sessions - attended_count, 0)
+
+    flagged = (
+        parent.attendance_threshold is not None
+        and missed_count > parent.attendance_threshold
+    )
+
+    # -----------------------------------------------------------
+    # Next session (parent might be upcoming)
+    # -----------------------------------------------------------
+    if parent.start_time >= now:
+        next_session = make_session_out(parent)
+    elif upcoming_sessions:
+        next_session = upcoming_sessions[0].session
+    else:
+        next_session = None
+
+    # -----------------------------------------------------------
+    # Parent EventOut (manually populated)
+    # -----------------------------------------------------------
+    parent_out = EventOut(
+        id=parent.id,
+        name=parent.name,
+        location=parent.location,
+        start_time=serialize_datetime(parent.start_time),
+        end_time=serialize_datetime(parent.end_time),
+        recurring=parent.recurring,
+        parent_id=parent.parent_id,
+        weekdays=parent.weekdays,
+        end_date=serialize_datetime(parent.end_date) if parent.end_date else None,
+        attendance_threshold=parent.attendance_threshold,
+        checkin_open_minutes=parent.checkin_open_minutes,
+        notes=parent.notes,
+        checkin_token=parent.checkin_token,
+        attendance_count=att_repo.count_for_event(db, parent.id),
+    )
+
+    # -----------------------------------------------------------
+    # Final response
+    # -----------------------------------------------------------
+    return MyEventDetails(
+        parent=parent_out,
+        attended=attended_count,
+        missed=missed_count,
+        flagged=flagged,
+        total_past_sessions=total_past_sessions,
+        next_session=next_session,
+        past_sessions=past_sessions,
+        upcoming_sessions=upcoming_sessions,
+    )

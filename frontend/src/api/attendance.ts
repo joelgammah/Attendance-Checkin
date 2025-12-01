@@ -1,4 +1,22 @@
 import { fetchJson } from './client'
+import type { EventOut, SessionOut } from '../types'
+
+// ------------------------------
+// Attendee: My Events Overview
+// ------------------------------
+
+export interface MyEventSummary {
+  parent: EventOut                 // full event
+  next_session: SessionOut | null  // next session the attendee can go to
+  attended: number
+  missed: number
+  flagged: boolean
+  total_past_sessions: number
+}
+
+export interface MyEventsOut {
+  events: MyEventSummary[]
+}
 
 export interface MyCheckIn {
   id: number
@@ -7,6 +25,22 @@ export interface MyCheckIn {
   event_name: string
   event_location: string
   event_start_time: string
+}
+
+export interface SessionWithAttendanceOut {
+  session: SessionOut;
+  attended: boolean;
+}
+
+export interface MyEventDetails {
+  parent: EventOut;
+  attended: number;
+  missed: number;
+  flagged: boolean;
+  total_past_sessions: number;
+  next_session: SessionWithAttendanceOut | null;
+  past_sessions: SessionWithAttendanceOut[];
+  upcoming_sessions: SessionWithAttendanceOut[];
 }
 
 export async function getMyCheckIns(): Promise<MyCheckIn[]> {
@@ -19,3 +53,14 @@ export async function checkIn(eventToken: string) {
     body: JSON.stringify({ event_token: eventToken })
   })
 }
+
+
+export async function getMyEvents(): Promise<MyEventSummary[]> {
+  const data = await fetchJson<MyEventsOut>('/v1/events/attendee/my-events')
+  return data.events
+}
+
+export async function getMyEventDetails(parentId: number): Promise<MyEventDetails> {
+  return fetchJson<MyEventDetails>(`/v1/events/attendee/event/${parentId}`);
+}
+

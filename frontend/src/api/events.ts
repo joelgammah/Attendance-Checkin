@@ -1,5 +1,6 @@
 import { fetchJson } from './client'
-import type { EventOut } from '../types'
+import type { DashboardEventsResponse, EventOut, EventFamilyResponse } from '../types'
+
 
 export async function createEvent(payload: any, comment?: string): Promise<EventOut> {
   const url = comment ? `/v1/events/?comment=${encodeURIComponent(comment)}` : `/v1/events/`;
@@ -7,6 +8,19 @@ export async function createEvent(payload: any, comment?: string): Promise<Event
 }
 export async function myUpcoming(): Promise<EventOut[]> { return fetchJson(`/v1/events/mine/upcoming`) }
 export async function myPast(): Promise<EventOut[]> { return fetchJson(`/v1/events/mine/past`) }
+
+
+export async function getDashboardEvents(): Promise<DashboardEventsResponse> {
+  return fetchJson('/v1/events/dashboard/events')
+}
+
+export async function getEventFamily(parentId: number): Promise<EventFamilyResponse> {
+  return fetchJson(`/v1/events/${parentId}/family`)
+}
+
+
+
+
 export async function getAllEvents(): Promise<EventOut[]> {
   return fetchJson<EventOut[]>('/v1/events/');
 }

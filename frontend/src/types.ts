@@ -22,4 +22,80 @@ export interface EventOut {
   weekdays?: string[]
   end_date?: string
   parent_id?: number
+  member_count: number
+  attendance_threshold?: number
+}
+
+export interface EventMember {
+  user_id: number
+  name: string
+  email: string
+  attendance_count: number
+  is_flagged: boolean
+}
+
+export type SessionOut = {
+  id: number;
+  start_time: string;
+  end_time: string;
+};
+
+export interface SessionListOut {
+  id: number
+  start_time: string
+  end_time: string
+  checkin_token: string
+}
+
+
+export type RecurringGroup = {
+  parent: EventOut;
+  children: SessionOut[];
+  next_session: SessionOut | null;
+  past_sessions: SessionOut[];
+  upcoming_sessions: SessionOut[];
+  total_past_sessions: number;
+};
+
+export type DashboardItem =
+  | { type: "solo"; event: EventOut }
+  | { type: "recurring_group"; group: RecurringGroup };
+
+export type DashboardEventsResponse = {
+  upcoming: DashboardItem[];
+  past: DashboardItem[];
+};
+
+export interface MemberAttendanceSummary {
+  user_id: number
+  name: string
+  email: string
+  attended: number
+  missed: number
+  is_flagged: boolean
+}
+
+export interface EventFamilyResponse {
+  parent: EventOut
+  upcoming_children: SessionListOut[]
+  past_children: SessionListOut[]
+  total_past_sessions: number
+  members: MemberAttendanceSummary[]
+}
+
+// ------------------------------
+// Attendee: My Events Overview
+// ------------------------------
+
+export interface MyEventSummary {
+  parent: EventOut                 // full event
+  next_session: SessionOut | null  // next session the attendee can go to
+  attended: number
+  missed: number
+  flagged: boolean
+  total_past_sessions: number
+}
+
+export interface MyEventsOut {
+  events: MyEventSummary[]
 }

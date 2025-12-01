@@ -54,7 +54,7 @@ class UserOut(BaseModel):
 @router.get("/", response_model=list[UserOut])
 def list_users(
     db: Session = Depends(get_db),
-    admin: User = Depends(require_any_role(UserRole.ADMIN))
+    admin: User = Depends(require_any_role(UserRole.ADMIN, UserRole.ORGANIZER))
 ):
     users = db.query(User).all()
     return [
