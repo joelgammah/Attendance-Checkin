@@ -410,9 +410,10 @@ describe('AttendeeEventOverview', () => {
       render(<AttendeeEventOverview />)
 
       await waitFor(() => {
-        const dashboardLink = screen.getByText('Dashboard')
+        // The visible text is inside a <span>; query the anchor element by its accessible name
+        const dashboardLink = screen.getByRole('link', { name: /dashboard/i })
         expect(dashboardLink).toBeInTheDocument()
-        expect(dashboardLink.getAttribute('href')).toBe('/')
+        expect(dashboardLink).toHaveAttribute('href', '/')
       })
     })
 
@@ -422,9 +423,10 @@ describe('AttendeeEventOverview', () => {
       render(<AttendeeEventOverview />)
 
       await waitFor(() => {
-        const checkInLink = screen.getByText('Check In')
+        // The visible text is inside a <span>; query the anchor element by its accessible name
+        const checkInLink = screen.getByRole('link', { name: /check in/i })
         expect(checkInLink).toBeInTheDocument()
-        expect(checkInLink.getAttribute('href')).toBe('/checkin/start')
+        expect(checkInLink).toHaveAttribute('href', '/checkin/start')
       })
     })
 

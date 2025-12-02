@@ -9,6 +9,12 @@ export DATABASE_URL=${DATABASE_URL:-postgresql+psycopg://postgres:postgres@postg
 
 echo "📊 Database URL: ${DATABASE_URL}"
 
+# Normalize Render 'postgres://' -> 'postgresql+psycopg://' for SQLAlchemy psycopg3
+if [[ "${DATABASE_URL:-}" == postgres://* ]]; then
+  echo "🔧 Normalizing DATABASE_URL scheme for SQLAlchemy (psycopg3)"
+  export DATABASE_URL="postgresql+psycopg://${DATABASE_URL#postgres://}"
+fi
+
 # Wait for PostgreSQL to be ready (max 30 seconds)
 if [[ "$DATABASE_URL" == postgresql* ]]; then
   echo "⏳ Waiting for PostgreSQL to be ready..."
