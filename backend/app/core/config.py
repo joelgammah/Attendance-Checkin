@@ -12,8 +12,8 @@ class Settings(BaseModel):
     SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret-key-change")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 12
     DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", 
-        "postgresql+psycopg://postgres:postgres@localhost:5432/terriercheckin"
+        "DATABASE_URL",
+        "postgresql+psycopg://postgres:postgres@localhost:5432/terriercheckin",
     )
     CORS_ORIGINS: list[str] = [os.getenv("CORS_ORIGIN", "http://localhost:5173")]
     DEFAULT_CHECKIN_OPEN_MINUTES: int = 15
@@ -24,3 +24,7 @@ class Settings(BaseModel):
 
 
 settings = Settings()
+
+# Normalize Render-style URLs globally in settings object so all DB consumers work
+if settings.DATABASE_URL.startswith("postgres://"):
+    settings.DATABASE_URL = "postgresql+psycopg://" + settings.DATABASE_URL[len("postgres://"):]
