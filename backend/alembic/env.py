@@ -23,6 +23,9 @@ def get_url():
     url = os.getenv("DATABASE_URL")
     if not url:
         raise RuntimeError("DATABASE_URL environment variable is not set!")
+    # Normalize Render-style URLs: postgres:// -> postgresql+psycopg:// (SQLAlchemy psycopg3)
+    if url.startswith("postgres://"):
+        url = "postgresql+psycopg://" + url[len("postgres://"):]
     return url
 
 
