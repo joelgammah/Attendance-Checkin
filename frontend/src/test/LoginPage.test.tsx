@@ -87,21 +87,13 @@ describe('LoginPage', () => {
     // Use the actual text from your page
     expect(screen.getByText('Sign in to access Terrier Check-In')).toBeInTheDocument()
     expect(screen.getByText('Sign in')).toBeInTheDocument()
-    
-    // Look for email input by value instead of placeholder
-    expect(screen.getByDisplayValue('grayj@wofford.edu')).toBeInTheDocument()
-    
-    // Look for password input by id
-    const passwordInput = screen.getByLabelText(/password/i)
-    expect(passwordInput).toBeInTheDocument()
   })
 
   it('logs in with demo creds', async () => {
     render(<LoginPage />)
-    
-    // Find inputs by different methods
-    const emailInput = screen.getByDisplayValue('grayj@wofford.edu')
-    const passwordInput = screen.getByLabelText(/password/i)
+    // Query inputs by accessible label (email and password start blank)
+    const emailInput = screen.getByLabelText(/email address/i) as HTMLInputElement
+    const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement
     
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
     fireEvent.change(passwordInput, { target: { value: 'password' } })
@@ -143,7 +135,7 @@ describe('LoginPage', () => {
     
     render(<LoginPage />)
     
-    const emailInput = screen.getByDisplayValue('grayj@wofford.edu')
+    const emailInput = screen.getByLabelText(/email address/i)
     const passwordInput = screen.getByLabelText(/password/i)
     
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
@@ -164,7 +156,7 @@ describe('LoginPage', () => {
     
     render(<LoginPage />)
     
-    const emailInput = screen.getByDisplayValue('grayj@wofford.edu')
+    const emailInput = screen.getByLabelText(/email address/i)
     const passwordInput = screen.getByLabelText(/password/i)
     
     fireEvent.change(emailInput, { target: { value: 'wrong@example.com' } })

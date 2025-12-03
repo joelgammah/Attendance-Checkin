@@ -28,12 +28,25 @@ const Auth0Inner: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         }
         
         // Add a small delay to ensure token provider is ready
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
           console.debug('[Auth0Inner] calling initializeAuth0UserProfile after delay; local token present?', !!localStorage.getItem('token'))
-          initializeAuth0UserProfile().catch((err) => {
-            console.error('Failed to initialize Auth0 user profile:', err)
-          })
+          if (initializeAuth0UserProfile && typeof initializeAuth0UserProfile === 'function') {
+            try {
+              const result = initializeAuth0UserProfile()
+              if (result && typeof result.catch === 'function') {
+                result.catch((err) => {
+                  console.error('Failed to initialize Auth0 user profile:', err)
+                })
+              }
+            } catch (err) {
+              console.error('Failed to initialize Auth0 user profile:', err)
+            }
+          }
         }, 100)
+        
+        return () => {
+          clearTimeout(timeoutId)
+        }
       }
     }
   }, [isAuthenticated, isLoading, error, user])

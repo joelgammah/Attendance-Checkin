@@ -4,8 +4,8 @@ import { useAuth0 } from '@auth0/auth0-react'
 
 export default function LoginPage(){
   const { loginWithRedirect, isAuthenticated, isLoading, user, getAccessTokenSilently } = useAuth0()
-  const [email, setEmail] = React.useState('grayj@wofford.edu')
-  const [password, setPassword] = React.useState('grayj')
+  const [email, setEmail] = React.useState('')
+  const [password, setPassword] = React.useState('')
   const [error, setError] = React.useState('')
   const [loading, setLoading] = React.useState(false)
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0)
@@ -228,6 +228,8 @@ export default function LoginPage(){
                 'Sign in'
               )}
             </button>
+
+            {/* Development tip removed */}
           </form>
           
           {/* Documentation Link */}
