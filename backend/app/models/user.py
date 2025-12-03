@@ -19,8 +19,10 @@ class User(IDMixin, Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     auth0_sub: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True)
 
-    events = relationship("Event", back_populates="organizer")
-    role_assignments = relationship("UserRoleAssignment", back_populates="user", cascade="all, delete-orphan", lazy="selectin")
+    events = relationship("Event", back_populates="organizer",    cascade="all, delete-orphan", passive_deletes=True)
+    role_assignments = relationship("UserRoleAssignment", back_populates="user", cascade="all, delete-orphan", lazy="selectin", passive_deletes=True)
+    attendances = relationship("Attendance", back_populates="attendee", cascade="all, delete-orphan", passive_deletes=True,)
+
 
     def roles(self) -> set[UserRole]:
         """Get all roles for this user from role_assignments"""

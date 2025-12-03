@@ -8,10 +8,11 @@ class Attendance(IDMixin, Base):
     __tablename__ = "attendances"
     __table_args__ = (UniqueConstraint("event_id", "attendee_id", name="uq_event_attendee"),)
 
-    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"))
-    attendee_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    attendee_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     checked_in_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     source_ip: Mapped[str | None] = mapped_column(String(64))
     user_agent: Mapped[str | None] = mapped_column(String(255))
 
     event = relationship("Event", back_populates="attendances")
+    attendee = relationship("User", back_populates="attendances", passive_deletes=True)
