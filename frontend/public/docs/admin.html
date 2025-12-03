@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin Guide — Attendance Check-In</title>
+  <style>
+    body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial;padding:24px;color:#0f172a;max-width:900px;margin:0 auto;line-height:1.6}
+    h1{margin-top:12px;color:#1e40af}
+    h2{color:#1e3a8a;margin-top:32px}
+    pre{background:#f8fafc;padding:12px;border-radius:6px;overflow:auto;border:1px solid #e2e8f0}
+    code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:14px}
+    .warning{background:#fef3c7;border:1px solid #f59e0b;padding:12px;border-radius:6px;margin:16px 0}
+    nav{margin:24px 0;padding:12px 0;border-bottom:1px solid #e2e8f0}
+    nav a{margin-right:16px;text-decoration:none;color:#2563eb}
+    .permissions{background:#f0f9ff;border:1px solid #0ea5e9;padding:16px;margin:16px 0;border-radius:6px}
+    .page-nav{display:flex;justify-content:space-between;margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/docs/index.html">← Back to Docs</a>
+    <a href="/docs/intro.html">Introduction</a>
+    <a href="/docs/usage.html">Usage</a>
+    <a href="/docs/api.html">API</a>
+    <a href="/docs/faq.html">FAQ</a>
+  </nav>
+
+  <h1>Admin Guide</h1>
+  <p>Administrative functions for managing users, organizations, and system-wide settings in the Attendance Check-In system.</p>
+
+  <h2>Admin Dashboard</h2>
+  <p>Admin users can:</p>
+  <ul>
+    <li>View and manage users and events</li>
+    <li>Create, edit, and delete user accounts</li>
+    <li>Assign user roles (organizer, attendee)</li>
+    <li>View system-wide attendance data</li>
+    <li>Access audit logs</li>
+  </ul>
+
+  <h2>User Management</h2>
+  <h3>Creating Users</h3>
+  <p>Admins can create new users through the admin panel. Required fields:</p>
+  <ul>
+    <li><strong>Email</strong>: Must be unique, serves as the username</li>
+    <li><strong>Full Name</strong>: Display name for the user</li>
+    <li><strong>Role</strong>: organizer or attendee</li>
+  </ul>
+
+  <h3>Role Permissions</h3>
+  <div class="permissions">
+    <ul>
+      <li><strong>Admin</strong>: Full system access, user management, all organizations</li>
+      <li><strong>Organizer</strong>: Create/manage events, view attendees, export data</li>
+      <li><strong>Attendee</strong>: Check into events, view assigned events</li>
+    </ul>
+  </div>
+
+  <div class="warning">
+    <strong>⚠️ Important:</strong> Admin role grants full system access. Only assign to trusted users who need system-wide management capabilities.
+  </div>
+
+
+  <h2>Monitoring & Logs</h2>
+  <h3>Health Checks</h3>
+  <ul>
+    <li><code>GET /healthz</code> - Basic application health</li>
+    <li><code>GET /api/v1/health</code> - Detailed system status</li>
+  </ul>
+
+  <h3>Audit Logs</h3>
+  <p>The system tracks important actions:</p>
+  <ul>
+    <li>User login/logout</li>
+    <li>Event creation/modification</li>
+    <li>Check-in activities</li>
+    <li>Admin actions (user creation, role changes)</li>
+  </ul>
+
+  <h2>Troubleshooting</h2>
+  <h3>Common Admin Issues</h3>
+  <ul>
+    <li><strong>Cannot access admin panel</strong>: Verify user has admin role assigned</li>
+    <li><strong>Users cannot log in</strong>: Check Auth0 configuration and callback URLs</li>
+    <li><strong>Database errors</strong>: Verify DATABASE_URL and connection</li>
+    <li><strong>CORS issues</strong>: Ensure CORS_ORIGIN matches frontend URL exactly</li>
+  </ul>
+
+  <h3>Support Contacts</h3>
+  <p>For technical issues or system administration help:</p>
+  <ul>
+    <li>Check system logs in the hosting environment</li>
+    <li>Review the deployment documentation in <code>RENDER.md</code></li>
+    <li>Contact the development team via project repository</li>
+  </ul>
+
+  <div class="page-nav">
+    <a href="/docs/usage.html">← User Guide</a>
+    <a href="/docs/api.html">API →</a>
+</body>
+</html>

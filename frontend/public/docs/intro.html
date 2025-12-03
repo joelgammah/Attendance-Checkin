@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Intro — Attendance Check-In</title>
+  <style>
+    body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial;padding:24px;color:#0f172a;max-width:900px;margin:0 auto;line-height:1.6}
+    h1{margin-top:12px;color:#1e40af}
+    h2{color:#1e3a8a;margin-top:32px}
+    h3{color:#1e40af;margin-top:24px}
+    pre{background:#f8fafc;padding:12px;border-radius:6px;overflow:auto;border:1px solid #e2e8f0}
+    code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:14px}
+    nav{margin:24px 0;padding:12px 0;border-bottom:1px solid #e2e8f0}
+    nav a{margin-right:16px;text-decoration:none;color:#2563eb}
+    .demo-accounts{background:#f0f9ff;border:1px solid #0ea5e9;padding:16px;margin:16px 0;border-radius:6px}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/docs/index.html">← Back to Docs</a>
+    <a href="/docs/usage.html">User Guide</a>
+    <a href="/docs/admin.html">Admin</a>
+    <a href="/docs/api.html">API</a>
+    <a href="/docs/faq.html">FAQ</a>
+  </nav>
+  <h1>Introduction</h1>
+  <p>Welcome to the Attendance Check-In user documentation. These pages explain how to use the web app to create events, generate QR codes, and check in attendees. The docs are bundled into the frontend and served at <code>/docs</code>.</p>
+
+  <h2>What you'll find here</h2>
+  <ul>
+    <li>How to log in and access the dashboard</li>
+    <li>How to create events</li>
+    <li>How to check in attendees</li>
+  </ul>
+
+  <h2>Editing these docs</h2>
+  <p>Documentation source files live under <code>frontend/public/docs/</code>. For production updates edit these files, then rebuild and push the frontend Docker image (see Build & Push guidance in <code>RENDER.md</code>), and trigger a redeploy on Render.</p>
+
+  <h2>Demo accounts</h2>
+  <div class="demo-accounts">
+    <p>Use the built-in demo users for testing (login with the email and use the email local part as the password when running local dev):</p>
+    <ul>
+      <li>Organizers: <code>grayj@wofford.edu</code>, <code>clublead@wofford.edu</code>, <code>garrettal@wofford.edu</code></li>
+      <li>Attendees: <code>gammahja@wofford.edu</code>, <code>martincs@wofford.edu</code>, <code>podrebarackc@wofford.edu</code></li>
+    </ul>
+  </div>
+
+  <p><a href="/docs/usage.html">User Guide →</a></p>
+  
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FAQ — Attendance Check-In</title>
+  <style>
+    body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial;padding:24px;color:#0f172a;max-width:900px;margin:0 auto;line-height:1.6}
+    h1{margin-top:12px;color:#1e40af}
+    h2{color:#1e3a8a;margin-top:32px}
+    h3{color:#1e40af;margin-top:24px}
+    .faq-item{background:#f0f9ff;border:1px solid #0ea5e9;padding:16px;margin:16px 0;border-radius:6px}
+    .faq-question{font-weight:bold;color:#1e40af;margin-bottom:8px}
+    pre{background:#f8fafc;padding:12px;border-radius:6px;overflow:auto;border:1px solid #e2e8f0}
+    code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:14px}
+    nav{margin:24px 0;padding:12px 0;border-bottom:1px solid #e2e8f0}
+    nav a{margin-right:16px;text-decoration:none;color:#2563eb}
+    .page-nav{display:flex;justify-content:space-between;margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/docs/index.html">← Back to Docs</a>
+    <a href="/docs/intro.html">Introduction</a>
+    <a href="/docs/usage.html">Usage</a>
+    <a href="/docs/admin.html">Admin</a>
+    <a href="/docs/api.html">API</a>
+  </nav>
+
+  <h1>Frequently Asked Questions</h1>
+  <p>Common questions and troubleshooting for the Attendance Check-In system.</p>
+
+  <h2>General Questions</h2>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: How do I reset my password?</div>
+    <p>A: Password reset is handled by the authentication provider (Auth0). Click "Forgot Password" on the login screen and follow the email instructions.</p>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: Can I check in to an event early?</div>
+    <p>A: Yes, but only within the check-in window. By default, check-in opens 15 minutes before the event start time. Contact the organizer if you need to check in earlier.</p>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: What happens if I lose my check-in QR code?</div>
+    <p>A: Contact the event organizer. They can provide you with the check-in URL or token directly. You can also access the event through your dashboard if you're logged in.</p>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: Can I check in multiple people at once?</div>
+    <p>A: No, each person must check in individually with their own account. This ensures accurate attendance tracking and security.</p>
+  </div>
+
+  <h2>Organizer Questions</h2>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: How do I add attendees to my event?</div>
+    <p>A: Create the event first, then share the QR code or check-in URL with intended attendees. They will appear in your attendee list after checking in.</p>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: Can I modify an event after creating it?</div>
+    <p>A: No, events cannot be modified once created. If you need to change an event, you'll have to create a new one and ask admin to delete the old one.</p>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: How do I export attendance data?</div>
+    <p>A: Go to your event page and click "Export CSV" or access the API endpoint: <code>GET /api/v1/events/{id}/attendance.csv</code></p>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: Can I customize the check-in window?</div>
+    <p>A: No, for now the default is 15 minutes.</p>
+  </div>
+
+  <h2>Technical Issues</h2>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: The QR code won't scan. What should I do?</div>
+    <p>A: Try these steps:</p>
+    <ol>
+      <li>Ensure good lighting and steady hands</li>
+      <li>Clean your camera lens</li>
+      <li>Try manually checking in using the event token</li>
+    </ol>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: I'm getting "CORS error" in the browser console</div>
+    <p>A: This is usually a backend configuration issue. Ensure:</p>
+    <ul>
+      <li>The backend <code>CORS_ORIGIN</code> includes your frontend URL</li>
+      <li>Both frontend and backend are running on expected ports</li>
+      <li>No ad blockers or security extensions are interfering</li>
+    </ul>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: "Callback URL mismatch" error when logging in</div>
+    <p>A: The Auth0 application settings need to include your callback URL. Add these to your Auth0 app:</p>
+    <ul>
+      <li>Allowed Callback URLs: <code>http://localhost:5173/callback</code> (dev) or your production URL</li>
+      <li>Allowed Logout URLs: Your frontend base URL</li>
+      <li>Allowed Web Origins: Your frontend base URL</li>
+    </ul>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: Database connection errors</div>
+    <p>A: Check these items:</p>
+    <ul>
+      <li>Verify <code>DATABASE_URL</code> environment variable is correct</li>
+      <li>Ensure database server is running and accessible</li>
+      <li>Check network connectivity and firewall rules</li>
+      <li>Verify SSL settings (add <code>?sslmode=require</code> for production)</li>
+    </ul>
+  </div>
+
+  <h2>Development & Deployment</h2>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: How do I run the app locally?</div>
+    <p>A: Follow the setup in <code>README.md</code>:</p>
+    <ol>
+      <li>Clone the repository</li>
+      <li>Set up Python virtual environment and install backend dependencies</li>
+      <li>Install frontend dependencies with pnpm</li>
+      <li>Start backend: <code>uvicorn app.main:app --reload</code></li>
+      <li>Start frontend: <code>pnpm dev</code></li>
+    </ol>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: How do I deploy to production?</div>
+    <p>A: See <code>RENDER.md</code> for detailed deployment instructions using Docker and Render. Key steps:</p>
+    <ol>
+      <li>Build Docker images for frontend and backend</li>
+      <li>Push images to Docker Hub</li>
+      <li>Deploy to Render with proper environment variables</li>
+      <li>Configure Auth0 with production callback URLs</li>
+    </ol>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: How do I update the documentation?</div>
+    <p>A: Edit files in <code>frontend/public/docs/</code>, then rebuild and redeploy the frontend Docker image. The docs are bundled with the frontend and served statically.</p>
+  </div>
+
+  <h2>Security & Privacy</h2>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: Is my data secure?</div>
+    <p>A: Yes. The system uses:</p>
+    <ul>
+      <li>HTTPS encryption for all data in transit</li>
+      <li>JWT tokens for secure authentication</li>
+      <li>Role-based access control</li>
+      <li>Secure password hashing</li>
+      <li>Database connection encryption</li>
+    </ul>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-question">Q: Who can see my attendance data?</div>
+    <p>A: Attendance data is only visible to:</p>
+    <ul>
+      <li>Event organizers (for their events only)</li>
+      <li>System administrators</li>
+      <li>The attendee themselves (their own records)</li>
+    </ul>
+  </div>
+
+  <h2>Still Need Help?</h2>
+  <p>If your question isn't answered here:</p>
+  <ul>
+    <li>Check the <a href="/docs/usage.html">User Guide</a> for detailed workflows</li>
+    <li>Review the <a href="/docs/api.html">API Reference</a> for technical integration</li>
+    <li>Contact your system administrator</li>
+    <li>Report issues on the project repository</li>
+  </ul>
+
+  <div class="page-nav">
+    <a href="/docs/api.html">← API</a>
+    <a href="/docs/">Back to Docs Home →</a>
+  </div>
+</body>
+</html>

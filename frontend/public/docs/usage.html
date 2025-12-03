@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Usage — Attendance Check-In</title>
+  <style>
+    body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial;padding:24px;color:#0f172a;max-width:900px;margin:0 auto;line-height:1.6}
+    h1{margin-top:12px;color:#1e40af}
+    h2{color:#1e3a8a;margin-top:32px}
+    h3{color:#1e40af;margin-top:24px}
+    pre{background:#f8fafc;padding:12px;border-radius:6px;overflow:auto;border:1px solid #e2e8f0}
+    code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:14px}
+    nav{margin:24px 0;padding:12px 0;border-bottom:1px solid #e2e8f0}
+    nav a{margin-right:16px;text-decoration:none;color:#2563eb}
+    .workflow{background:#f0f9ff;border:1px solid #0ea5e9;padding:16px;margin:16px 0;border-radius:6px}
+    .page-nav{display:flex;justify-content:space-between;margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/docs/index.html">← Back to Docs</a>
+    <a href="/docs/intro.html">Introduction</a>
+    <a href="/docs/admin.html">Admin</a>
+    <a href="/docs/api.html">API</a>
+    <a href="/docs/faq.html">FAQ</a>
+  </nav>
+  <h1>User Guide</h1>
+
+  <h2>Logging in</h2>
+  <p>Open the app and click <strong>Log in</strong>. For local development (no external Auth0), demo accounts are seeded automatically. Use the demo email and the email local-part as the password (for example, email <code>gammahja@wofford.edu</code> → password <code>gammahja</code>).</p>
+
+  <h2>User roles</h2>
+  <ul>
+    <li><strong>Admin</strong>: full access to all orgs and user management pages.</li>
+    <li><strong>Organizer</strong>: create and manage events, view/export attendance CSVs.</li>
+    <li><strong>Attendee</strong>: view events they are invited to and complete check-ins.</li>
+  </ul>
+
+  <h2>Organizer: create an event</h2>
+  <div class="workflow">
+    <ol>
+      <li>Go to your dashboard and click <em>New Event</em>.</li>
+      <li>Fill in title, date/time, location, and whether recurring or one-time event.</li>
+      <li>Save the event. A QR code and a short token will be generated for attendees.</li>
+    </ol>
+  </div>
+
+  <h2>Starting a check-in</h2>
+  <div class="workflow">
+    <ol>
+      <li>Log in to your account and click <em>Start Check-in</em>. This opens the check-in interface.</li>
+      <li>Attendees can scan the QR code or check in with the token on the Check-In page (example: <code>a32gd58hG-fs8d2</code>).</li>
+    </ol>
+  </div>
+
+  <h2>Export attendance</h2>
+  <p>Organizers can export attendance as CSV from the event page. The backend exposes a CSV endpoint (organizer-only):</p>
+  <pre><code>GET /api/v1/events/{event_id}/attendance.csv</code></pre>
+
+  <h2>Health & API</h2>
+  <p>Check the backend health and the OpenAPI docs (FastAPI) at:</p>
+  <ul>
+    <li><code>/healthz</code> — basic health check</li>
+    <li><code>/docs</code> on the backend — OpenAPI interactive docs (e.g. <code>http://localhost:8000/docs</code> in docker dev)</li>
+  </ul>
+
+  <h2>Troubleshooting (common issues)</h2>
+  <ul>
+    <li><strong>Callback URL mismatch</strong>: If Auth0 redirects fail, add the app callback URL (<code>/callback</code>) to your Auth0 application settings.</li>
+    <li><strong>CORS errors</strong>: Ensure <code>CORS_ORIGIN</code> includes your frontend origin (e.g. <code>http://localhost:5173</code> for dev).</li>
+  </ul>
+
+  <div class="page-nav">
+    <a href="/docs/intro.html">← Introduction</a>
+    <a href="/docs/admin.html">Admin →</a>
+  </div>
+
+</body>
+</html>

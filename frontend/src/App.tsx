@@ -3,6 +3,7 @@ import Protected from './components/Protected'
 import LoginPage from './pages/LoginPage'
 import CallbackPage from './pages/Callback'
 import DashboardPage from './pages/DashboardPage'
+import DocsPage from './pages/DocsPage'
 import AttendeeDashboard from './pages/AttendeeDashboard'
 import EventFormPage from './pages/EventFormPage'
 import EventDetailPage from './pages/EventDetailPage'
@@ -98,6 +99,10 @@ function ProtectedDashboard() {
 
 export default function App(){
   const path = usePath()
+  // Serve static documentation under /docs via a React Docs page that
+  // fetches static HTML from /docs/*.html. This keeps docs public and
+  // allows the app to render them inside the SPA (no extra deps required).
+  if (path === '/docs' || path.startsWith('/docs/')) return <DocsPage />
   if(path === '/admin') return <Protected roles={['admin']}><AdminDashboardPage /></Protected>
   if(path === '/callback') return <CallbackPage />
   if(path === '/email-verified') return <EmailVerificationSuccess />
