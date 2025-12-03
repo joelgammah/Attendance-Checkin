@@ -27,7 +27,7 @@ class Event(IDMixin, Base):
     
 
     organizer_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    organizer = relationship("User", back_populates="events")
+    organizer = relationship("User", back_populates="events", passive_deletes=True)
     members = relationship("EventMember", back_populates="event", cascade="all, delete-orphan")
 
     attendances = relationship("Attendance", back_populates="event", cascade="all, delete-orphan")
