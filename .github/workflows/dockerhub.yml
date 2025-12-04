@@ -85,6 +85,7 @@ jobs:
           else
             echo "Testing frontend nginx configuration..."
             timeout 30 docker run --rm \
+              -e BACKEND_ORIGIN="http://localhost:8000" \
               "$IMAGE_TAG" \
               nginx -t || {
               echo "❌ Frontend nginx configuration invalid"
