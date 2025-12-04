@@ -69,7 +69,7 @@ jobs:
             sleep 10
             
             docker run -d --name test-backend \
-              -e DATABASE_URL="postgresql://testuser:testpass@host.docker.internal:5432/testdb" \
+              -e DATABASE_URL="postgresql+psycopg2://testuser:testpass@host.docker.internal:5432/testdb" \
               -p 8000:8000 \
               collinmartin/attendance-checkin:${{ matrix.component }}
             echo "Waiting for backend to start..."
