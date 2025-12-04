@@ -62,25 +62,61 @@ jobs:
               -p 8000:8000 \
               collinmartin/attendance-checkin:${{ matrix.component }}
             echo "Waiting for backend to start..."
-            sleep 20
-            # Check if container is still running
-            if ! docker ps | grep test-backend; then
-              echo "Backend container failed to start"
-              docker logs test-backend
+            sleep 15
+            
+            # Check if container is still running and show logs if not
+            if ! docker ps | grep -q test-backend; then
+              echo "Backend container failed to start. Checking logs:"
+              docker logs test-backend || echo "No logs available"
               exit 1
             fi
-            curl -f http://localhost:8000/healthz || exit 1
+            
+            # Test health endpoint with retries
+            for i in {1..5}; do
+              echo "Health check attempt $i/5..."
+              if curl -f http://localhost:8000/healthz; then
+                echo "Backend test passed!"
+                docker stop test-backend
+                exit 0
+              fi
+              sleep 5
+            done
+            
+            echo "Backend health check failed after 5 attempts"
+            docker logs test-backend
             docker stop test-backend
-            echo "Backend test passed!"
+            exit 1
+            
           else
             echo "Testing frontend image..."
             docker run --rm -d --name test-frontend \
               -p 3000:80 \
               collinmartin/attendance-checkin:${{ matrix.component }}
-            sleep 5
-            curl -f http://localhost:3000/ || exit 1
+            echo "Waiting for frontend to start..."
+            sleep 10
+            
+            # Check if container is running
+            if ! docker ps | grep -q test-frontend; then
+              echo "Frontend container failed to start. Checking logs:"
+              docker logs test-frontend || echo "No logs available"
+              exit 1
+            fi
+            
+            # Test with retries
+            for i in {1..3}; do
+              echo "Frontend test attempt $i/3..."
+              if curl -f http://localhost:3000/; then
+                echo "Frontend test passed!"
+                docker stop test-frontend
+                exit 0
+              fi
+              sleep 5
+            done
+            
+            echo "Frontend test failed after 3 attempts"
+            docker logs test-frontend
             docker stop test-frontend
-            echo "Frontend test passed!"
+            exit 1
           fi
 
       - name: Push ${{ matrix.component }}
