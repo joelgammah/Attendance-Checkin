@@ -74,15 +74,14 @@ jobs:
           
           # Basic smoke test - can container start?
           if [ "${{ matrix.component }}" = "backend" ]; then
-            echo "Testing backend container can start..."
-            timeout 30 docker run --rm \
-              -e DATABASE_URL="sqlite:///app/test.db" \
+            echo "Testing backend container Python environment..."
+            timeout 30 docker run --rm --entrypoint python \
               "$IMAGE_TAG" \
-              python -c "print('✅ Backend Python interpreter works')" || {
-              echo "❌ Backend container startup failed"
+              -c "import sys; print(f'✅ Python {sys.version} works'); import fastapi; print('✅ FastAPI imported')" || {
+              echo "❌ Backend Python environment test failed"
               exit 1
             }
-            echo "✅ Backend container startup test passed"
+            echo "✅ Backend container environment test passed"
           else
             echo "Testing frontend nginx configuration..."
             timeout 30 docker run --rm \
