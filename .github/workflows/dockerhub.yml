@@ -57,8 +57,19 @@ jobs:
         run: |
           if [ "${{ matrix.component }}" = "backend" ]; then
             echo "Testing backend image..."
+            # Start a minimal postgres container for testing
+            docker run -d --name test-postgres \
+              -e POSTGRES_PASSWORD=testpass \
+              -e POSTGRES_USER=testuser \
+              -e POSTGRES_DB=testdb \
+              -p 5432:5432 \
+              postgres:13-alpine
+            
+            echo "Waiting for postgres to be ready..."
+            sleep 10
+            
             docker run -d --name test-backend \
-              -e DATABASE_URL="sqlite:///:memory:" \
+              -e DATABASE_URL="postgresql://testuser:testpass@host.docker.internal:5432/testdb" \
               -p 8000:8000 \
               collinmartin/attendance-checkin:${{ matrix.component }}
             echo "Waiting for backend to start..."
@@ -69,6 +80,8 @@ jobs:
               echo "Backend container failed to start. Checking logs:"
               docker logs test-backend
               docker rm test-backend
+              docker stop test-postgres
+              docker rm test-postgres
               exit 1
             fi
             
@@ -79,6 +92,8 @@ jobs:
                 echo "Backend test passed!"
                 docker stop test-backend
                 docker rm test-backend
+                docker stop test-postgres
+                docker rm test-postgres
                 exit 0
               fi
               sleep 5
@@ -88,6 +103,8 @@ jobs:
             docker logs test-backend
             docker stop test-backend
             docker rm test-backend
+            docker stop test-postgres
+            docker rm test-postgres
             exit 1
             
           else
