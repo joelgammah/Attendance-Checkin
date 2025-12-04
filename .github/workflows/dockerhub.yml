@@ -58,7 +58,7 @@ jobs:
           if [ "${{ matrix.component }}" = "backend" ]; then
             echo "Testing backend image..."
             docker run -d --name test-backend \
-              -e DATABASE_URL="sqlite:///app/test.db" \
+              -e DATABASE_URL="sqlite:///:memory:" \
               -p 8000:8000 \
               collinmartin/attendance-checkin:${{ matrix.component }}
             echo "Waiting for backend to start..."
