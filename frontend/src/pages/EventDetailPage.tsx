@@ -29,9 +29,10 @@ export default function EventDetailPage() {
   // Generate the QR code after the event is loaded
   React.useEffect(() => {
     if (event && canvasRef.current) {
+      const checkInUrl = `${window.location.origin}/checkin/${event.checkin_token}`
       QRCode.toCanvas(
         canvasRef.current,
-        event.checkin_token,
+        checkInUrl,
         {
           width: 256,
           margin: 2,

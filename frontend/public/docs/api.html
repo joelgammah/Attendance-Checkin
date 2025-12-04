@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>API Reference — Attendance Check-In</title>
+  <style>
+    body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial;padding:24px;color:#0f172a;max-width:900px;margin:0 auto;line-height:1.6}
+    h1{margin-top:12px;color:#1e40af}
+    h2{color:#1e3a8a;margin-top:32px}
+    h3{color:#1e40af;margin-top:24px}
+    pre{background:#f8fafc;padding:12px;border-radius:6px;overflow:auto;border:1px solid #e2e8f0}
+    code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:14px}
+    .endpoint{background:#f0f9ff;border:1px solid #0ea5e9;padding:16px;margin:16px 0;border-radius:6px}
+    .method{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:bold;font-size:12px}
+    .get{background:#10b981;color:white}
+    .post{background:#3b82f6;color:white}
+    .put{background:#f59e0b;color:white}
+    .delete{background:#ef4444;color:white}
+    nav{margin:24px 0;padding:12px 0;border-bottom:1px solid #e2e8f0}
+    nav a{margin-right:16px;text-decoration:none;color:#2563eb}
+    .page-nav{display:flex;justify-content:space-between;margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/docs/index.html">← Back to Docs</a>
+    <a href="/docs/intro.html">Introduction</a>
+    <a href="/docs/usage.html">Usage</a>
+    <a href="/docs/admin.html">Admin</a>
+    <a href="/docs/faq.html">FAQ</a>
+  </nav>
+
+  <h1>API Reference</h1>
+  <p>REST API endpoints for the Attendance Check-In system. All endpoints require authentication unless noted.</p>
+
+  <h2>Base URLs</h2>
+  <ul>
+    <li><strong>Development:</strong> <code>http://localhost:8000</code></li>
+    <li><strong>Production:</strong> <code>https://your-backend-url.onrender.com</code></li>
+  </ul>
+
+  <h2>Authentication</h2>
+  <p>The API uses JWT tokens provided by Auth0. Include the token in the Authorization header:</p>
+  <pre><code>Authorization: Bearer your-jwt-token</code></pre>
+
+  <h2>Users</h2>
+
+  <div class="endpoint">
+    <span class="method get">GET</span> <code>/api/v1/users/me</code>
+    <p>Get current user profile and role information.</p>
+    <strong>Response:</strong>
+    <pre><code>{
+  "id": 1,
+  "email": "user@example.com",
+  "name": "John Doe",
+  "role": "organizer",
+  "organization_id": 1
+}</code></pre>
+  </div>
+
+  <div class="endpoint">
+    <span class="method get">GET</span> <code>/api/v1/users</code>
+    <p>List all users (admin only).</p>
+  </div>
+
+  <h2>Events</h2>
+
+  <div class="endpoint">
+    <span class="method get">GET</span> <code>/api/v1/events</code>
+    <p>List events. Organizers see their events, attendees see assigned events.</p>
+  </div>
+
+  <div class="endpoint">
+    <span class="method post">POST</span> <code>/api/v1/events</code>
+    <p>Create a new event (organizer/admin only).</p>
+    <strong>Request body:</strong>
+    <pre><code>{
+  "name": "Team Meeting",
+  "description": "Weekly team sync",
+  "start_time": "2024-01-15T14:00:00Z",
+  "end_time": "2024-01-15T15:00:00Z",
+  "location": "Conference Room A",
+  "checkin_open_minutes": 15
+}</code></pre>
+  </div>
+
+  <div class="endpoint">
+    <span class="method get">GET</span> <code>/api/v1/events/{id}</code>
+    <p>Get event details by ID.</p>
+  </div>
+
+  <div class="endpoint">
+    <span class="method put">PUT</span> <code>/api/v1/events/{id}</code>
+    <p>Update event (organizer/admin only).</p>
+  </div>
+
+  <div class="endpoint">
+    <span class="method delete">DELETE</span> <code>/api/v1/events/{id}</code>
+    <p>Delete event (organizer/admin only).</p>
+  </div>
+
+  <h2>Attendance</h2>
+
+  <div class="endpoint">
+    <span class="method post">POST</span> <code>/api/v1/events/{id}/checkin</code>
+    <p>Check in to an event using a token.</p>
+    <strong>Request body:</strong>
+    <pre><code>{
+  "token": "abc123def456",
+  "location": "Conference Room A"
+}</code></pre>
+  </div>
+
+  <div class="endpoint">
+    <span class="method get">GET</span> <code>/api/v1/events/{id}/attendees</code>
+    <p>List event attendees (organizer/admin only).</p>
+  </div>
+
+  <div class="endpoint">
+    <span class="method get">GET</span> <code>/api/v1/events/{id}/attendance.csv</code>
+    <p>Export attendance as CSV (organizer/admin only).</p>
+    <strong>Response:</strong> CSV file download
+  </div>
+
+  <h2>Organizations</h2>
+
+  <div class="endpoint">
+    <span class="method get">GET</span> <code>/api/v1/organizations</code>
+    <p>List organizations (admin only).</p>
+  </div>
+
+  <div class="endpoint">
+    <span class="method post">POST</span> <code>/api/v1/organizations</code>
+    <p>Create organization (admin only).</p>
+  </div>
+
+  <h2>System</h2>
+
+  <div class="endpoint">
+    <span class="method get">GET</span> <code>/healthz</code>
+    <p>Health check endpoint (no auth required).</p>
+    <strong>Response:</strong>
+    <pre><code>{"status": "healthy"}</code></pre>
+  </div>
+
+  <div class="endpoint">
+    <span class="method get">GET</span> <code>/docs</code>
+    <p>Interactive API documentation (Swagger UI).</p>
+  </div>
+
+  <h2>Error Responses</h2>
+  <p>The API returns standard HTTP status codes:</p>
+  <ul>
+    <li><strong>400</strong>: Bad Request - Invalid input</li>
+    <li><strong>401</strong>: Unauthorized - Missing or invalid token</li>
+    <li><strong>403</strong>: Forbidden - Insufficient permissions</li>
+    <li><strong>404</strong>: Not Found - Resource doesn't exist</li>
+    <li><strong>422</strong>: Unprocessable Entity - Validation errors</li>
+    <li><strong>500</strong>: Internal Server Error</li>
+  </ul>
+
+
+  <h2>SDKs and Examples</h2>
+  <h3>JavaScript/TypeScript</h3>
+  <pre><code>// Check in to event
+const response = await fetch('/api/v1/events/123/checkin', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    token: 'checkin-token',
+    location: 'Room 101'
+  })
+});
+
+const result = await response.json();</code></pre>
+
+  <h3>Python</h3>
+  <pre><code>import requests
+
+headers = {'Authorization': f'Bearer {token}'}
+response = requests.get(
+    'https://api.example.com/api/v1/events',
+    headers=headers
+)
+events = response.json()</code></pre>
+
+  <div class="page-nav">
+    <a href="/docs/admin.html">← Admin</a>
+    <a href="/docs/faq.html">FAQ →</a>
+  </div>
+</body>
+</html>

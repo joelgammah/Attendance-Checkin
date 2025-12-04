@@ -29,7 +29,42 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build & Push ${{ matrix.component }}
+      - name: Build ${{ matrix.component }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.component == 'backend' && 'infra/docker/backend.Dockerfile' || 'infra/docker/frontend.Dockerfile' }}
+          push: false
+          load: true
+          tags: |
+            collinmartin/attendance-checkin:${{ matrix.component }}
+            collinmartin/attendance-checkin:${{ matrix.component }}-${{ github.sha }}
+          platforms: linux/amd64
+
+      - name: Test ${{ matrix.component }} Image
+        run: |
+          if [ "${{ matrix.component }}" = "backend" ]; then
+            echo "Testing backend image..."
+            docker run --rm -d --name test-backend \
+              -e DATABASE_URL="sqlite:///tmp/test.db" \
+              -p 8000:8000 \
+              collinmartin/attendance-checkin:${{ matrix.component }}
+            sleep 10
+            curl -f http://localhost:8000/healthz || exit 1
+            docker stop test-backend
+            echo "Backend test passed!"
+          else
+            echo "Testing frontend image..."
+            docker run --rm -d --name test-frontend \
+              -p 3000:80 \
+              collinmartin/attendance-checkin:${{ matrix.component }}
+            sleep 5
+            curl -f http://localhost:3000/ || exit 1
+            docker stop test-frontend
+            echo "Frontend test passed!"
+          fi
+
+      - name: Push ${{ matrix.component }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -38,6 +73,4 @@ jobs:
           tags: |
             collinmartin/attendance-checkin:${{ matrix.component }}
             collinmartin/attendance-checkin:${{ matrix.component }}-${{ github.sha }}
-          build-args: |
-            ${{ matrix.component == 'frontend' && format('VITE_API_URL={0}', secrets.FRONTEND_VITE_API_URL) || '' }}
           platforms: linux/amd64

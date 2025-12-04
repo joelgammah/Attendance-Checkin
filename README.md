@@ -163,6 +163,20 @@ docker compose up --build
 - Update `AUTH0_DOMAIN` and `AUTH0_AUDIENCE` in `.env` with your Auth0 tenant details.
 - Update `SECRET_KEY` in `.env` to a strong, random value. Use `openssl rand -hex 32` to generate one.
 
+## Deployment
+
+For production deployment to Render using Docker Hub, see **[`RENDER.md`](RENDER.md)** for the complete guide.
+
+### Automated CI/CD Pipeline
+
+GitHub Actions automatically builds, tests, and pushes Docker images on every push to `main`:
+
+- **Docker Smoke Tests**: Basic health checks ensuring containers start and serve responses
+- **Build → Test → Push**: Only validated images reach Docker Hub  
+- **Multi-platform**: Images built for `linux/amd64` (Render compatibility)
+
+See `.github/workflows/dockerhub.yml` for workflow details.
+
 ## Notes
 - Check‑in window opens `checkin_open_minutes` (default 15) **before** start and closes at end.
 - Event QR payload is a URL: `/checkin?token=...`. Attendees must be logged in to complete check‑in.

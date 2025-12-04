@@ -43,6 +43,8 @@ services:
       dockerfile: infra/docker/frontend.Dockerfile
       args:
         VITE_API_URL: /api
+    environment:
+      - BACKEND_ORIGIN=http://backend:8000
     ports:
       - "8080:80"
     depends_on:

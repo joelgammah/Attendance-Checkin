@@ -231,6 +231,16 @@ export default function LoginPage(){
 
             {/* Development tip removed */}
           </form>
+          
+          {/* Documentation Link */}
+          <div className="mt-6 text-center">
+            <a 
+              href="/docs/index.html" 
+              className="text-sm text-gray-600 hover:text-gray-800 underline"
+            >
+              Need help? View Documentation
+            </a>
+          </div>
         </div>
       </div>
 
