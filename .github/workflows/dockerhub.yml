@@ -36,6 +36,13 @@ jobs:
           file: ${{ matrix.component == 'backend' && 'infra/docker/backend.Dockerfile' || 'infra/docker/frontend.Dockerfile' }}
           push: false
           load: true
+          build-args: |
+            VITE_API_URL=/api
+            VITE_AUTH0_DOMAIN=${{ secrets.VITE_AUTH0_DOMAIN }}
+            VITE_AUTH0_CLIENT_ID=${{ secrets.VITE_AUTH0_CLIENT_ID }}
+            VITE_AUTH0_AUDIENCE=${{ secrets.VITE_AUTH0_AUDIENCE }}
+            VITE_AUTH0_REDIRECT_URI=${{ secrets.VITE_AUTH0_REDIRECT_URI }}
+            VITE_AUTH0_LOGOUT_REDIRECT_URI=${{ secrets.VITE_AUTH0_LOGOUT_REDIRECT_URI }}
           tags: |
             collinmartin/attendance-checkin:${{ matrix.component }}
             collinmartin/attendance-checkin:${{ matrix.component }}-${{ github.sha }}
@@ -49,7 +56,14 @@ jobs:
               -e DATABASE_URL="sqlite:///tmp/test.db" \
               -p 8000:8000 \
               collinmartin/attendance-checkin:${{ matrix.component }}
-            sleep 10
+            echo "Waiting for backend to start..."
+            sleep 20
+            # Check if container is still running
+            if ! docker ps | grep test-backend; then
+              echo "Backend container failed to start"
+              docker logs test-backend
+              exit 1
+            fi
             curl -f http://localhost:8000/healthz || exit 1
             docker stop test-backend
             echo "Backend test passed!"
@@ -70,6 +84,13 @@ jobs:
           context: .
           file: ${{ matrix.component == 'backend' && 'infra/docker/backend.Dockerfile' || 'infra/docker/frontend.Dockerfile' }}
           push: true
+          build-args: |
+            VITE_API_URL=/api
+            VITE_AUTH0_DOMAIN=${{ secrets.VITE_AUTH0_DOMAIN }}
+            VITE_AUTH0_CLIENT_ID=${{ secrets.VITE_AUTH0_CLIENT_ID }}
+            VITE_AUTH0_AUDIENCE=${{ secrets.VITE_AUTH0_AUDIENCE }}
+            VITE_AUTH0_REDIRECT_URI=${{ secrets.VITE_AUTH0_REDIRECT_URI }}
+            VITE_AUTH0_LOGOUT_REDIRECT_URI=${{ secrets.VITE_AUTH0_LOGOUT_REDIRECT_URI }}
           tags: |
             collinmartin/attendance-checkin:${{ matrix.component }}
             collinmartin/attendance-checkin:${{ matrix.component }}-${{ github.sha }}
