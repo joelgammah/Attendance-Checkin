@@ -20,6 +20,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Create frontend .env.docker file
+        if: matrix.component == 'frontend'
+        run: |
+          cat > frontend/.env.docker << EOF
+          VITE_API_URL=/api
+          VITE_AUTH0_DOMAIN=${{ secrets.VITE_AUTH0_DOMAIN }}
+          VITE_AUTH0_CLIENT_ID=${{ secrets.VITE_AUTH0_CLIENT_ID }}
+          VITE_AUTH0_AUDIENCE=${{ secrets.VITE_AUTH0_AUDIENCE }}
+          VITE_AUTH0_REDIRECT_URI=${{ secrets.VITE_AUTH0_REDIRECT_URI }}
+          VITE_AUTH0_LOGOUT_REDIRECT_URI=${{ secrets.VITE_AUTH0_LOGOUT_REDIRECT_URI }}
+          EOF
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -36,13 +48,6 @@ jobs:
           file: ${{ matrix.component == 'backend' && 'infra/docker/backend.Dockerfile' || 'infra/docker/frontend.Dockerfile' }}
           push: false
           load: true
-          build-args: |
-            VITE_API_URL=/api
-            VITE_AUTH0_DOMAIN=${{ secrets.VITE_AUTH0_DOMAIN }}
-            VITE_AUTH0_CLIENT_ID=${{ secrets.VITE_AUTH0_CLIENT_ID }}
-            VITE_AUTH0_AUDIENCE=${{ secrets.VITE_AUTH0_AUDIENCE }}
-            VITE_AUTH0_REDIRECT_URI=${{ secrets.VITE_AUTH0_REDIRECT_URI }}
-            VITE_AUTH0_LOGOUT_REDIRECT_URI=${{ secrets.VITE_AUTH0_LOGOUT_REDIRECT_URI }}
           tags: |
             collinmartin/attendance-checkin:${{ matrix.component }}
             collinmartin/attendance-checkin:${{ matrix.component }}-${{ github.sha }}
@@ -84,13 +89,6 @@ jobs:
           context: .
           file: ${{ matrix.component == 'backend' && 'infra/docker/backend.Dockerfile' || 'infra/docker/frontend.Dockerfile' }}
           push: true
-          build-args: |
-            VITE_API_URL=/api
-            VITE_AUTH0_DOMAIN=${{ secrets.VITE_AUTH0_DOMAIN }}
-            VITE_AUTH0_CLIENT_ID=${{ secrets.VITE_AUTH0_CLIENT_ID }}
-            VITE_AUTH0_AUDIENCE=${{ secrets.VITE_AUTH0_AUDIENCE }}
-            VITE_AUTH0_REDIRECT_URI=${{ secrets.VITE_AUTH0_REDIRECT_URI }}
-            VITE_AUTH0_LOGOUT_REDIRECT_URI=${{ secrets.VITE_AUTH0_LOGOUT_REDIRECT_URI }}
           tags: |
             collinmartin/attendance-checkin:${{ matrix.component }}
             collinmartin/attendance-checkin:${{ matrix.component }}-${{ github.sha }}
