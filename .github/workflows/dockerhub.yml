@@ -57,20 +57,27 @@ jobs:
         run: |
           echo "Testing that ${{ matrix.component }} image was built successfully..."
           
-          # Verify image exists
-          if ! docker images | grep -q "collinmartin/attendance-checkin:${{ matrix.component }}"; then
+          echo "Available Docker images:"
+          docker images | grep -E "(collinmartin|attendance-checkin)" || echo "No matching images found"
+          
+          # Check for image with component tag or SHA tag
+          if docker images | grep -q "collinmartin/attendance-checkin.*${{ matrix.component }}"; then
+            echo "✅ Found ${{ matrix.component }} image"
+            IMAGE_TAG=$(docker images --format "table {{.Repository}}:{{.Tag}}" | grep "collinmartin/attendance-checkin.*${{ matrix.component }}" | head -1 | cut -d' ' -f1)
+            echo "Using image: $IMAGE_TAG"
+          else
             echo "❌ Image collinmartin/attendance-checkin:${{ matrix.component }} not found!"
+            echo "All available images:"
+            docker images
             exit 1
           fi
-          
-          echo "✅ Image collinmartin/attendance-checkin:${{ matrix.component }} exists"
           
           # Basic smoke test - can container start?
           if [ "${{ matrix.component }}" = "backend" ]; then
             echo "Testing backend container can start..."
             timeout 30 docker run --rm \
               -e DATABASE_URL="sqlite:///app/test.db" \
-              collinmartin/attendance-checkin:${{ matrix.component }} \
+              "$IMAGE_TAG" \
               python -c "print('✅ Backend Python interpreter works')" || {
               echo "❌ Backend container startup failed"
               exit 1
@@ -79,7 +86,7 @@ jobs:
           else
             echo "Testing frontend nginx configuration..."
             timeout 30 docker run --rm \
-              collinmartin/attendance-checkin:${{ matrix.component }} \
+              "$IMAGE_TAG" \
               nginx -t || {
               echo "❌ Frontend nginx configuration invalid"
               exit 1
