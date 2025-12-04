@@ -33,19 +33,33 @@ We deploy three separate services on Render:
 
 Render does not build from source. It only pulls prebuilt Docker Hub images.
 
-1. Make code changes locally.
-2. Build a new Docker image (frontend or backend).
-3. Push the image to Docker Hub.
-4. In Render, trigger a new deploy:
+### Automatic (Recommended)
 
-   * Manual Deploy → Deploy latest reference, or
-   * Update environment variables if changed (automatically triggers deploy).
+1. Make code changes locally and push to `main` branch
+2. GitHub Actions automatically builds and pushes Docker images to Docker Hub if PR passes frontend and backend smoke tests
+3. In Render, trigger a new deploy: **Manual Deploy → Deploy latest reference** to deploy the latest images
 
-**Note**: Documentation updates require rebuilding the frontend image since docs are included in the static build.
+### Manual (Alternative)
 
-## Building and Pushing Docker Images (Correct Method)
+1. Make code changes locally
+2. Build and push Docker images manually (see below)
+3. In Render, trigger a new deploy
+* Note: Manual builds means deploying images built outside of GitHub Actions.
 
-Render requires images built for **linux/amd64**, even on Mac (ARM).
+## Building and Pushing Docker Images
+
+### Automatic CI/CD (GitHub Actions)
+
+Every push to `main` branch automatically:
+- Builds both frontend and backend images for `linux/amd64`
+- Runs smoke tests to validate containers
+- Pushes images to Docker Hub with tags:
+  - `collinmartin/attendance-checkin:frontend` / `:backend` (latest)
+  - `collinmartin/attendance-checkin:frontend-<sha>` / `:backend-<sha>` (versioned)
+
+### Manual Build (When Needed)
+
+If you need to build images manually, Render requires images built for **linux/amd64**, even on Mac (ARM).
 
 ### Build and push backend image
 
