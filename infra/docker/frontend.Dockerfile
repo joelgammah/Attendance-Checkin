@@ -1,18 +1,25 @@
 # ---- build ----
-FROM node:20-alpine AS build
+FROM node:20-bullseye AS build
 WORKDIR /app
 
-# Install build tools for node-gyp (needed for packages like canvas)
-RUN apk add --no-cache \
+
+# Install build tools for node-gyp and canvas
+RUN apt-get update && apt-get install -y \
     python3 \
     make \
+    gcc \
     g++ \
-    pkgconfig \
-    pixman-dev \
-    cairo-dev \
-    pango-dev \
-    jpeg-dev \
-    giflib-dev
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    libpixman-1-dev \
+    libfreetype6-dev \
+    libfontconfig1-dev \
+    libgdk-pixbuf-2.0-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
 
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=${VITE_API_URL}
