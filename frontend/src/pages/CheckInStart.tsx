@@ -1,9 +1,12 @@
 import React, { useState } from 'react'
 import { checkIn } from '../api/attendance'
+import { Scanner } from "@yudiel/react-qr-scanner"
+
 
 export default function CheckInStart() {
   const [token, setToken] = useState('')
   const [error, setError] = useState('')
+  const [scanned, setScanned] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function submit(e: React.FormEvent) {
@@ -180,6 +183,50 @@ export default function CheckInStart() {
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm">
+          {/* QR Scanner Section */}
+          <div className="mb-10">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+              Scan QR Code
+            </h2>
+            {!scanned && (
+              <div className="flex justify-center">
+                <div className="w-full max-w-sm border border-gray-300 rounded-xl overflow-hidden shadow-sm">
+                  <Scanner
+                    constraints={{ facingMode: 'environment' }}
+                    onScan={(detectedCodes) => {
+                      if (!detectedCodes || detectedCodes.length === 0 || scanned) return;
+                      setScanned(true);
+
+                      try {
+                        let qrValue = detectedCodes[0].rawValue;
+                        
+                        // If QR contains a full URL, extract the token
+                        if (qrValue.startsWith('http://') || qrValue.startsWith('https://')) {
+                          const url = new URL(qrValue);
+                          const pathSegments = url.pathname.split('/');
+                          // Extract token from URL path (last segment should be the token)
+                          qrValue = pathSegments[pathSegments.length - 1];
+                        }
+                        
+                        // navigate directly to your check-in handler
+                        history.pushState({}, '', `/checkin/${encodeURIComponent(qrValue)}`)
+                        window.dispatchEvent(new PopStateEvent('popstate'))
+                      } catch (err) {
+                        setError("Invalid or expired QR code");
+                        setScanned(false);
+                      }
+                    }}
+                    onError={(err) => console.error(err)}
+                    ///classNames="w-full"
+                  />
+                </div>
+              </div>
+            )}
+            {error && (
+              <p className="text-sm text-red-600 mt-3">{error}</p>
+            )}
+          </div>
+
           <form onSubmit={submit} className="space-y-6">
             {error && (
               <div className="text-sm text-red-700 bg-red-50 border border-red-100 p-3 rounded-lg">

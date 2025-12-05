@@ -2,6 +2,12 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import '@testing-library/jest-dom'
 
+vi.mock('@yudiel/react-qr-scanner', () => ({
+  Scanner: () => <div data-testid="mock-scanner">Mock Scanner</div>
+}));
+
+
+
 // Mock localStorage
 const mockLocalStorage = {
   removeItem: vi.fn(),
@@ -142,7 +148,7 @@ describe('CheckInStart Enhanced Coverage', () => {
     input.removeAttribute('required')
     fireEvent.submit(form)
     
-    expect(screen.getByText('Please enter an event token')).toBeInTheDocument()
+    expect(screen.getAllByText('Please enter an event token').length).toBeGreaterThan(0)
   })
 
   it('shows error when submitting whitespace-only token', () => {
@@ -154,7 +160,7 @@ describe('CheckInStart Enhanced Coverage', () => {
     
     fireEvent.submit(form)
     
-    expect(screen.getByText('Please enter an event token')).toBeInTheDocument()
+    expect(screen.getAllByText('Please enter an event token').length).toBeGreaterThan(0)
   })
 
   it('navigates with simple token', () => {
@@ -205,7 +211,7 @@ describe('CheckInStart Enhanced Coverage', () => {
     const submitButton = screen.getByText('Check In')
     fireEvent.click(submitButton)
     
-    expect(screen.getByText('No token found in the URL')).toBeInTheDocument()
+    expect(screen.getAllByText('No token found in the URL').length).toBeGreaterThan(0)
   })
 
   it('shows error for invalid URL', () => {
@@ -218,8 +224,8 @@ describe('CheckInStart Enhanced Coverage', () => {
     fireEvent.click(submitButton)
     
     // The error message will be from the URL constructor
-    const errorElement = screen.getByText(/Invalid token format|Invalid URL/)
-    expect(errorElement).toBeInTheDocument()
+    const errorElement = screen.getAllByText(/Invalid token format|Invalid URL/)
+    expect(errorElement.length).toBeGreaterThan(0)
   })
 
   it('clears input and error when clear button is clicked', () => {
@@ -232,7 +238,7 @@ describe('CheckInStart Enhanced Coverage', () => {
     // First trigger an error
     fireEvent.change(input, { target: { value: '   ' } })
     fireEvent.submit(form)
-    expect(screen.getByText('Please enter an event token')).toBeInTheDocument()
+    expect(screen.getAllByText('Please enter an event token').length).toBeGreaterThan(0)
     
     // Now clear
     const clearButton = screen.getByText('Clear')
@@ -264,7 +270,7 @@ describe('CheckInStart Enhanced Coverage', () => {
     // Remove required attribute and trigger an error
     input.removeAttribute('required')
     fireEvent.submit(form)
-    expect(screen.getByText('Please enter an event token')).toBeInTheDocument()
+    expect(screen.getAllByText('Please enter an event token').length).toBeGreaterThan(0)
     
     // Then type something and submit again (this should clear the error)
     fireEvent.change(input, { target: { value: 'new-token' } })
