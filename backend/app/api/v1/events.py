@@ -839,7 +839,7 @@ def get_dashboard_events(
             )
         )
 
-        if ev.start_time >= now:
+        if ev.end_time >= now:
             upcoming_list.append(wrapped)
         else:
             past_list.append(wrapped)
