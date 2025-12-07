@@ -1,28 +1,39 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import '@testing-library/jest-dom'
+import React from 'react'
 
-// Mock dependencies
-vi.mock('../api/events', () => ({
-  myUpcoming: vi.fn(),
-  myPast: vi.fn()
+// Mock attendance APIs used by AttendeeDashboard
+vi.mock('../api/attendance', () => ({
+  getMyCheckIns: vi.fn(),
+  getMyEvents: vi.fn()
 }))
 
+// Mock Nav, Protected (default + Link) and RoleSwitch components
 vi.mock('../components/Nav', () => ({
   default: () => <div data-testid="nav">Nav Component</div>
 }))
-
-// Fix: Include Link export in Protected mock
 vi.mock('../components/Protected', () => ({
   default: ({ children }: any) => <div data-testid="protected">{children}</div>,
   Link: ({ children, to, ...props }: any) => <a href={to} {...props}>{children}</a>
 }))
+vi.mock('../components/RoleSwitch', () => ({
+  default: () => <div data-testid="roleswitch">RoleSwitch</div>
+}))
 
-// Import mocked functions
-import { myUpcoming, myPast } from '../api/events'
+// Mock auth0 hook
+vi.mock('@auth0/auth0-react', () => ({
+  useAuth0: () => ({
+    isAuthenticated: false,
+    logout: vi.fn(),
+    user: { email: 'testuser@example.com' }
+  })
+}))
 
-const mockMyUpcoming = myUpcoming as any
-const mockMyPast = myPast as any
+// Import the mocked functions
+import { getMyCheckIns, getMyEvents } from '../api/attendance'
+const mockGetMyCheckIns = getMyCheckIns as unknown as jest.Mock | any
+const mockGetMyEvents = getMyEvents as unknown as jest.Mock | any
 
 import AttendeeDashboard from '../pages/AttendeeDashboard'
 
@@ -32,264 +43,98 @@ describe('AttendeeDashboard Coverage Tests', () => {
   })
 
   it('renders with loading state', () => {
-    mockMyUpcoming.mockImplementation(() => new Promise(() => {}))
-    mockMyPast.mockImplementation(() => new Promise(() => {}))
-    
+    mockGetMyCheckIns.mockImplementation(() => new Promise(() => {}))
+    mockGetMyEvents.mockImplementation(() => new Promise(() => {}))
+
     const { container } = render(<AttendeeDashboard />)
-    
-    // Check what's actually rendered
+
     const nav = screen.queryByTestId('nav')
     const protected_ = screen.queryByTestId('protected')
-    
-    // At least one should exist
+
     expect(nav || protected_ || container.firstChild).toBeTruthy()
   })
 
   it('renders with no events', async () => {
-    mockMyUpcoming.mockResolvedValue([])
-    mockMyPast.mockResolvedValue([])
-    
+    mockGetMyCheckIns.mockResolvedValue([])
+    mockGetMyEvents.mockResolvedValue([])
+
     const { container } = render(<AttendeeDashboard />)
-    
+
     await waitFor(() => {
-      // Look for any content that indicates successful render
       expect(container.firstChild).toBeTruthy()
     })
   })
 
-  it('renders with upcoming events', async () => {
-    const upcomingEvents = [
+  it('renders with upcoming groups (events)', async () => {
+    const groups = [
       {
-        id: 1,
-        name: 'Test Event',
-        location: 'Test Location',
-        start_time: '2024-12-01T10:00:00Z',
-        end_time: '2024-12-01T12:00:00Z',
-        attendance_count: 5,
-        checkin_token: 'token1'
+        parent: { id: 'g1', name: 'Yoga Group', location: 'Gym' },
+        next_session: { start_time: '2025-12-01T10:00:00Z' },
+        total_past_sessions: 3
       }
     ]
-    
-    mockMyUpcoming.mockResolvedValue(upcomingEvents)
-    mockMyPast.mockResolvedValue([])
-    
-    const { container } = render(<AttendeeDashboard />)
-    
+
+    mockGetMyCheckIns.mockResolvedValue([])
+    mockGetMyEvents.mockResolvedValue(groups)
+
+    render(<AttendeeDashboard />)
+
     await waitFor(() => {
-      expect(container.firstChild).toBeTruthy()
+      expect(screen.getByText('Yoga Group')).toBeInTheDocument()
+      expect(screen.getByText('My Events')).toBeInTheDocument()
     })
   })
 
-  it('renders with past events', async () => {
-    const pastEvents = [
+  it('renders with past check-ins', async () => {
+    const checkIns = [
       {
         id: 1,
-        name: 'Past Event',
-        location: 'Past Location',
-        start_time: '2023-01-01T10:00:00Z',
-        end_time: '2023-01-01T12:00:00Z',
-        attendance_count: 15,
-        checkin_token: 'past-token'
+        event_name: 'Past Event',
+        event_location: 'Hall A',
+        checked_in_at: '2024-01-01T10:00:00Z'
       }
     ]
-    
-    mockMyUpcoming.mockResolvedValue([])
-    mockMyPast.mockResolvedValue(pastEvents)
-    
+
+    mockGetMyCheckIns.mockResolvedValue(checkIns)
+    mockGetMyEvents.mockResolvedValue([])
+
+    render(<AttendeeDashboard />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Past Event')).toBeInTheDocument()
+      expect(screen.getByText('Recent Check-ins')).toBeInTheDocument()
+    })
+  })
+
+  it('handles API errors gracefully', async () => {
+    mockGetMyCheckIns.mockRejectedValue(new Error('CheckIns failed'))
+    mockGetMyEvents.mockRejectedValue(new Error('Events failed'))
+
     const { container } = render(<AttendeeDashboard />)
-    
+
     await waitFor(() => {
       expect(container.firstChild).toBeTruthy()
     })
   })
 
-  it('handles API errors', async () => {
-    mockMyUpcoming.mockRejectedValue(new Error('API Error'))
-    mockMyPast.mockRejectedValue(new Error('API Error'))
-    
-    const { container } = render(<AttendeeDashboard />)
-    
-    await waitFor(() => {
-      expect(container.firstChild).toBeTruthy()
-    })
-  })
-
-  it('renders with large datasets', async () => {
-    const manyEvents = Array.from({ length: 10 }, (_, i) => ({
-      id: i + 1,
-      name: `Event ${i + 1}`,
-      location: `Location ${i + 1}`,
-      start_time: '2024-12-01T10:00:00Z',
-      end_time: '2024-12-01T12:00:00Z',
-      attendance_count: i * 5,
-      checkin_token: `token-${i + 1}`
+  it('handles large datasets without crashing', async () => {
+    const manyGroups = Array.from({ length: 20 }, (_, i) => ({
+      parent: { id: `g${i+1}`, name: `Group ${i+1}`, location: `Loc ${i+1}` },
+      next_session: null,
+      total_past_sessions: i
     }))
-    
-    mockMyUpcoming.mockResolvedValue(manyEvents)
-    mockMyPast.mockResolvedValue(manyEvents)
-    
-    const { container } = render(<AttendeeDashboard />)
-    
-    await waitFor(() => {
-      expect(container.firstChild).toBeTruthy()
-    })
-  })
-
-  it('handles mixed success and error scenarios', async () => {
-    mockMyUpcoming.mockResolvedValue([
-      {
-        id: 1,
-        name: 'Working Event',
-        location: 'Test Location',
-        start_time: '2024-12-01T10:00:00Z',
-        end_time: '2024-12-01T12:00:00Z',
-        attendance_count: 5,
-        checkin_token: 'token1'
-      }
-    ])
-    mockMyPast.mockRejectedValue(new Error('Past events failed'))
-    
-    const { container } = render(<AttendeeDashboard />)
-    
-    await waitFor(() => {
-      expect(container.firstChild).toBeTruthy()
-    })
-  })
-
-  it('handles different event data structures', async () => {
-    const eventsWithMinimalData = [
-      {
-        id: 1,
-        name: 'Minimal Event',
-        start_time: '2024-12-01T10:00:00Z',
-        checkin_token: 'token1'
-      }
-    ]
-    
-    mockMyUpcoming.mockResolvedValue(eventsWithMinimalData)
-    mockMyPast.mockResolvedValue([])
-    
-    const { container } = render(<AttendeeDashboard />)
-    
-    await waitFor(() => {
-      expect(container.firstChild).toBeTruthy()
-    })
-  })
-
-  it('handles events with zero attendance', async () => {
-    const zeroAttendanceEvents = [
-      {
-        id: 1,
-        name: 'Empty Event',
-        location: 'Test Location',
-        start_time: '2024-12-01T10:00:00Z',
-        end_time: '2024-12-01T12:00:00Z',
-        attendance_count: 0,
-        checkin_token: 'token1'
-      }
-    ]
-    
-    mockMyUpcoming.mockResolvedValue(zeroAttendanceEvents)
-    mockMyPast.mockResolvedValue([])
-    
-    const { container } = render(<AttendeeDashboard />)
-    
-    await waitFor(() => {
-      expect(container.firstChild).toBeTruthy()
-    })
-  })
-
-  it('handles component lifecycle', async () => {
-    mockMyUpcoming.mockResolvedValue([])
-    mockMyPast.mockResolvedValue([])
-    
-    const { container, rerender, unmount } = render(<AttendeeDashboard />)
-    
-    await waitFor(() => {
-      expect(container.firstChild).toBeTruthy()
-    })
-    
-    // Test re-render
-    rerender(<AttendeeDashboard />)
-    expect(container.firstChild).toBeTruthy()
-    
-    // Test unmount
-    unmount()
-  })
-
-  it('handles partial API success scenarios', async () => {
-    mockMyUpcoming.mockRejectedValue(new Error('Upcoming failed'))
-    mockMyPast.mockResolvedValue([
-      {
-        id: 1,
-        name: 'Past Event',
-        location: 'Past Location',
-        start_time: '2023-01-01T10:00:00Z',
-        checkin_token: 'past-token'
-      }
-    ])
-    
-    const { container } = render(<AttendeeDashboard />)
-    
-    await waitFor(() => {
-      expect(container.firstChild).toBeTruthy()
-    })
-  })
-
-  it('handles finally block execution', async () => {
-    mockMyUpcoming.mockResolvedValue([])
-    mockMyPast.mockResolvedValue([])
-    
-    const { container } = render(<AttendeeDashboard />)
-    
-    // This ensures the finally block runs (setLoading(false))
-    await waitFor(() => {
-      expect(container.firstChild).toBeTruthy()
-    })
-  })
-
-  it('handles empty response arrays', async () => {
-    mockMyUpcoming.mockResolvedValue([])
-    mockMyPast.mockResolvedValue([])
-    
-    const { container } = render(<AttendeeDashboard />)
-    
-    await waitFor(() => {
-      expect(container.firstChild).toBeTruthy()
-    })
-  })
-
-  it('handles network timeout errors', async () => {
-    mockMyUpcoming.mockImplementation(() => 
-      Promise.reject(new Error('Network timeout'))
-    )
-    mockMyPast.mockImplementation(() => 
-      Promise.reject(new Error('Network timeout'))
-    )
-    
-    const { container } = render(<AttendeeDashboard />)
-    
-    await waitFor(() => {
-      expect(container.firstChild).toBeTruthy()
-    })
-  })
-
-  it('handles very large event datasets', async () => {
-    const hugeEvents = Array.from({ length: 100 }, (_, i) => ({
+    const manyCheckIns = Array.from({ length: 20 }, (_, i) => ({
       id: i + 1,
-      name: `Massive Event ${i + 1}`,
-      location: `Location ${i + 1}`,
-      start_time: '2024-12-01T10:00:00Z',
-      end_time: '2024-12-01T12:00:00Z',
-      attendance_count: Math.floor(Math.random() * 1000),
-      checkin_token: `token-${i + 1}`
+      event_name: `Event ${i+1}`,
+      event_location: `Location ${i+1}`,
+      checked_in_at: '2024-12-01T10:00:00Z'
     }))
-    
-    mockMyUpcoming.mockResolvedValue(hugeEvents)
-    mockMyPast.mockResolvedValue(hugeEvents)
-    
+
+    mockGetMyCheckIns.mockResolvedValue(manyCheckIns)
+    mockGetMyEvents.mockResolvedValue(manyGroups)
+
     const { container } = render(<AttendeeDashboard />)
-    
+
     await waitFor(() => {
       expect(container.firstChild).toBeTruthy()
     })
