@@ -77,6 +77,8 @@ def promote_to_organizer(
     user = db.query(User).get(user_id)
     if not user:
         raise HTTPException(404, "User not found")
+    if comment is None or (isinstance(comment, str) and comment.strip() == ""):
+        raise HTTPException(status_code=400, detail="Comment is required for this action")
     user.add_role(UserRole.ORGANIZER)
     db.commit()
     AuditLogRepository.log_audit(
@@ -102,6 +104,8 @@ def revoke_organizer(
     user = db.query(User).get(user_id)
     if not user:
         raise HTTPException(404, "User not found")
+    if comment is None or (isinstance(comment, str) and comment.strip() == ""):
+        raise HTTPException(status_code=400, detail="Comment is required for this action")
     user.remove_role(UserRole.ORGANIZER)
     db.commit()
     AuditLogRepository.log_audit(
@@ -127,6 +131,8 @@ def delete_user(
     user = db.query(User).get(user_id)
     if not user:
         raise HTTPException(404, "User not found")
+    if comment is None or (isinstance(comment, str) and comment.strip() == ""):
+        raise HTTPException(status_code=400, detail="Comment is required for this action")
     db.delete(user)
     db.commit()
     AuditLogRepository.log_audit(
@@ -151,6 +157,8 @@ def create_user(
     # Check if user already exists
     if db.query(User).filter(User.email == user_in.email).first():
         raise HTTPException(status_code=400, detail="User already exists")
+    if comment is None or (isinstance(comment, str) and comment.strip() == ""):
+        raise HTTPException(status_code=400, detail="Comment is required for this action")
     hashed_password = pwd_context.hash(user_in.password)
     user = User(
         name=user_in.name,

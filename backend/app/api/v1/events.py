@@ -630,6 +630,8 @@ def delete_event(
     is_event_organizer = event.organizer_id == user.id
     if not (is_admin or is_event_organizer):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    if comment is None or (isinstance(comment, str) and comment.strip() == ""):
+        raise HTTPException(status_code=400, detail="Comment is required for this action")
     db.delete(event)
     db.commit()
     AuditLogRepository.log_audit(

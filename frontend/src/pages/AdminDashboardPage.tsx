@@ -27,6 +27,7 @@ export default function AdminDashboardPage() {
   const [actionLoading, setActionLoading] = React.useState<number | null>(null);
   const [confirm, setConfirm] = React.useState<{ type: string, id: number | null, name?: string } | null>(null);
   const [comment, setComment] = React.useState<string>('');
+  const [commentError, setCommentError] = React.useState<string>('');
   const role = getActiveRole();
 
   // Show notification and auto-hide after 5 seconds
@@ -83,6 +84,7 @@ export default function AdminDashboardPage() {
       setActionLoading(null);
       setConfirm(null);
       setComment('');
+      setCommentError('');
     }
   };
 
@@ -98,6 +100,7 @@ export default function AdminDashboardPage() {
       setActionLoading(null);
       setConfirm(null);
       setComment('');
+      setCommentError('');
     }
   };
 
@@ -113,6 +116,7 @@ export default function AdminDashboardPage() {
       setActionLoading(null);
       setConfirm(null);
       setComment('');
+      setCommentError('');
     }
   };
 
@@ -129,6 +133,7 @@ export default function AdminDashboardPage() {
       setActionLoading(null);
       setConfirm(null);
       setComment('');
+      setCommentError('');
     }
   };
 
@@ -388,13 +393,16 @@ export default function AdminDashboardPage() {
                 {confirm.type === 'revoke' && `Revoke Organizer status from user ${confirm.name}?`}
               </p>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Comment (optional)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Comment (required)</label>
                 <textarea
                   value={comment}
                   onChange={e => setComment(e.target.value)}
                   placeholder="Add context for this action..."
                   className="w-full h-24 resize-none rounded-md border border-gray-300 focus:ring-2 focus:ring-[#95866A] focus:border-[#95866A] p-2 text-sm bg-white/90"
                 />
+                {commentError && (
+                  <p className="mt-1 text-xs text-red-600">{commentError}</p>
+                )}
                 <p className="mt-1 text-xs text-gray-500">Will appear in Audit Logs under Comments.</p>
               </div>
               <div className="flex gap-3 justify-end">
@@ -407,7 +415,13 @@ export default function AdminDashboardPage() {
                 {confirm.type === 'deleteUser' && (
                   <button
                     className="px-4 py-2 rounded bg-red-600 text-white font-medium"
-                    onClick={() => handleDeleteUser(confirm.id!, comment || undefined)}
+                    onClick={() => {
+                      if (!comment || comment.trim() === '') {
+                        setCommentError('Please provide a comment for this action.');
+                        return;
+                      }
+                      handleDeleteUser(confirm.id!, comment);
+                    }}
                   >
                     Delete
                   </button>
@@ -415,7 +429,13 @@ export default function AdminDashboardPage() {
                 {confirm.type === 'deleteEvent' && (
                   <button
                     className="px-4 py-2 rounded bg-red-600 text-white font-medium"
-                    onClick={() => handleDeleteEvent(confirm.id!, comment || undefined)}
+                    onClick={() => {
+                      if (!comment || comment.trim() === '') {
+                        setCommentError('Please provide a comment for this action.');
+                        return;
+                      }
+                      handleDeleteEvent(confirm.id!, comment);
+                    }}
                   >
                     Delete
                   </button>
@@ -423,7 +443,13 @@ export default function AdminDashboardPage() {
                 {confirm.type === 'promote' && (
                   <button
                     className="px-4 py-2 rounded bg-green-600 text-white font-medium"
-                    onClick={() => handlePromote(confirm.id!, comment || undefined)}
+                    onClick={() => {
+                      if (!comment || comment.trim() === '') {
+                        setCommentError('Please provide a comment for this action.');
+                        return;
+                      }
+                      handlePromote(confirm.id!, comment);
+                    }}
                   >
                     Promote
                   </button>
@@ -431,7 +457,13 @@ export default function AdminDashboardPage() {
                 {confirm.type === 'revoke' && (
                   <button
                     className="px-4 py-2 rounded bg-yellow-600 text-white font-medium"
-                    onClick={() => handleRevoke(confirm.id!, comment || undefined)}
+                    onClick={() => {
+                      if (!comment || comment.trim() === '') {
+                        setCommentError('Please provide a comment for this action.');
+                        return;
+                      }
+                      handleRevoke(confirm.id!, comment);
+                    }}
                   >
                     Revoke
                   </button>
