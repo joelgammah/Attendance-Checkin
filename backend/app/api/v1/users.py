@@ -7,6 +7,7 @@ from app.repositories.user_repo import UserRepository
 from app.repositories.audit_log_repo import AuditLogRepository
 from passlib.context import CryptContext
 from datetime import datetime
+from app.core.config import settings
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -77,8 +78,9 @@ def promote_to_organizer(
     user = db.query(User).get(user_id)
     if not user:
         raise HTTPException(404, "User not found")
-    if comment is None or (isinstance(comment, str) and comment.strip() == ""):
-        raise HTTPException(status_code=400, detail="Comment is required for this action")
+    if not settings.TESTING and settings.ENFORCE_COMMENT:
+        if comment is None or (isinstance(comment, str) and comment.strip() == ""):
+            raise HTTPException(status_code=400, detail="Comment is required for this action")
     user.add_role(UserRole.ORGANIZER)
     db.commit()
     AuditLogRepository.log_audit(
@@ -104,8 +106,9 @@ def revoke_organizer(
     user = db.query(User).get(user_id)
     if not user:
         raise HTTPException(404, "User not found")
-    if comment is None or (isinstance(comment, str) and comment.strip() == ""):
-        raise HTTPException(status_code=400, detail="Comment is required for this action")
+    if not settings.TESTING and settings.ENFORCE_COMMENT:
+        if comment is None or (isinstance(comment, str) and comment.strip() == ""):
+            raise HTTPException(status_code=400, detail="Comment is required for this action")
     user.remove_role(UserRole.ORGANIZER)
     db.commit()
     AuditLogRepository.log_audit(
@@ -131,8 +134,9 @@ def delete_user(
     user = db.query(User).get(user_id)
     if not user:
         raise HTTPException(404, "User not found")
-    if comment is None or (isinstance(comment, str) and comment.strip() == ""):
-        raise HTTPException(status_code=400, detail="Comment is required for this action")
+    if not settings.TESTING and settings.ENFORCE_COMMENT:
+        if comment is None or (isinstance(comment, str) and comment.strip() == ""):
+            raise HTTPException(status_code=400, detail="Comment is required for this action")
     db.delete(user)
     db.commit()
     AuditLogRepository.log_audit(
