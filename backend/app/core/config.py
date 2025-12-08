@@ -30,6 +30,24 @@ class Settings(BaseModel):
     # Optional server-side enforcement for comment requirement (off by default)
     ENFORCE_COMMENT: bool = os.getenv("ENFORCE_COMMENT", "").lower() in ("1", "true", "yes")
 
+def is_testing_runtime() -> bool:
+    """Evaluate testing mode dynamically from environment.
+    Explicit TESTING env wins, otherwise detect pytest via PYTEST_CURRENT_TEST.
+    """
+    val = os.getenv("TESTING")
+    if val is not None:
+        v = val.lower()
+        if v in ("1", "true", "yes"):
+            return True
+        if v in ("0", "false", "no"):
+            return False
+    return os.getenv("PYTEST_CURRENT_TEST") is not None
+
+def enforce_comment_runtime() -> bool:
+    """Evaluate comment enforcement dynamically from environment."""
+    val = os.getenv("ENFORCE_COMMENT")
+    return val is not None and val.lower() in ("1", "true", "yes")
+
 
 settings = Settings()
 

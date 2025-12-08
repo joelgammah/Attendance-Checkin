@@ -7,7 +7,7 @@ from app.repositories.user_repo import UserRepository
 from app.repositories.audit_log_repo import AuditLogRepository
 from passlib.context import CryptContext
 from datetime import datetime
-from app.core.config import settings
+from app.core.config import settings, is_testing_runtime, enforce_comment_runtime
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -78,7 +78,7 @@ def promote_to_organizer(
     user = db.query(User).get(user_id)
     if not user:
         raise HTTPException(404, "User not found")
-    if not settings.TESTING and settings.ENFORCE_COMMENT:
+    if not is_testing_runtime() and enforce_comment_runtime():
         if comment is None or (isinstance(comment, str) and comment.strip() == ""):
             raise HTTPException(status_code=400, detail="Comment is required for this action")
     user.add_role(UserRole.ORGANIZER)
@@ -106,7 +106,7 @@ def revoke_organizer(
     user = db.query(User).get(user_id)
     if not user:
         raise HTTPException(404, "User not found")
-    if not settings.TESTING and settings.ENFORCE_COMMENT:
+    if not is_testing_runtime() and enforce_comment_runtime():
         if comment is None or (isinstance(comment, str) and comment.strip() == ""):
             raise HTTPException(status_code=400, detail="Comment is required for this action")
     user.remove_role(UserRole.ORGANIZER)
@@ -134,7 +134,7 @@ def delete_user(
     user = db.query(User).get(user_id)
     if not user:
         raise HTTPException(404, "User not found")
-    if not settings.TESTING and settings.ENFORCE_COMMENT:
+    if not is_testing_runtime() and enforce_comment_runtime():
         if comment is None or (isinstance(comment, str) and comment.strip() == ""):
             raise HTTPException(status_code=400, detail="Comment is required for this action")
     db.delete(user)
