@@ -157,8 +157,6 @@ def create_user(
     # Check if user already exists
     if db.query(User).filter(User.email == user_in.email).first():
         raise HTTPException(status_code=400, detail="User already exists")
-    if comment is None or (isinstance(comment, str) and comment.strip() == ""):
-        raise HTTPException(status_code=400, detail="Comment is required for this action")
     hashed_password = pwd_context.hash(user_in.password)
     user = User(
         name=user_in.name,
