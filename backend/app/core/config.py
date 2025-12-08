@@ -21,6 +21,32 @@ class Settings(BaseModel):
     # access tokens using the tenant JWKS and require the configured audience.
     AUTH0_DOMAIN: str = os.getenv("AUTH0_DOMAIN", "")  # e.g. dev-xxx.us.auth0.com
     AUTH0_AUDIENCE: str = os.getenv("AUTH0_AUDIENCE", "")  # e.g. https://attendance-api
+    # Testing flag: explicit TESTING env wins; otherwise infer from pytest
+    TESTING: bool = (
+        os.getenv("TESTING").lower() in ("1", "true", "yes")
+        if os.getenv("TESTING") is not None
+        else os.getenv("PYTEST_CURRENT_TEST") is not None
+    )
+    # Optional server-side enforcement for comment requirement (off by default)
+    ENFORCE_COMMENT: bool = os.getenv("ENFORCE_COMMENT", "").lower() in ("1", "true", "yes")
+
+def is_testing_runtime() -> bool:
+    """Evaluate testing mode dynamically from environment.
+    Explicit TESTING env wins, otherwise detect pytest via PYTEST_CURRENT_TEST.
+    """
+    val = os.getenv("TESTING")
+    if val is not None:
+        v = val.lower()
+        if v in ("1", "true", "yes"):
+            return True
+        if v in ("0", "false", "no"):
+            return False
+    return os.getenv("PYTEST_CURRENT_TEST") is not None
+
+def enforce_comment_runtime() -> bool:
+    """Evaluate comment enforcement dynamically from environment."""
+    val = os.getenv("ENFORCE_COMMENT")
+    return val is not None and val.lower() in ("1", "true", "yes")
 
 
 settings = Settings()

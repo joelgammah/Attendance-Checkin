@@ -17,8 +17,9 @@ from app.repositories.event_member_repo import EventMemberRepository
 
 from app.models.event import Event
 from app.models.attendance import Attendance
-from app.core.config import settings
+from app.core.config import settings, is_testing_runtime, enforce_comment_runtime
 from app.models.event_member import EventMember
+from app.core.config import settings
 
 
 router = APIRouter()
@@ -630,6 +631,9 @@ def delete_event(
     is_event_organizer = event.organizer_id == user.id
     if not (is_admin or is_event_organizer):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    if not is_testing_runtime() and enforce_comment_runtime():
+        if comment is None or (isinstance(comment, str) and comment.strip() == ""):
+            raise HTTPException(status_code=400, detail="Comment is required for this action")
     db.delete(event)
     db.commit()
     AuditLogRepository.log_audit(
